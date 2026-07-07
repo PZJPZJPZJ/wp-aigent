@@ -108,19 +108,6 @@ $i18n = !empty($meta['chatbot_i18n']) ? $meta['chatbot_i18n'] : $defaults['chatb
                 </span>
                 <?php endforeach; ?>
             </div>
-
-            <h4 style="margin:12px 0 6px;font-size:12px;text-transform:uppercase;color:#666;"><?php esc_html_e('Dashicons (Fallback)', 'wp-aigent'); ?></h4>
-            <div class="ai-chatbot-fa-grid" style="display:flex;flex-wrap:wrap;gap:6px;max-width:400px;">
-                <?php
-                $dashicons = ['dashicons-format-chat', 'dashicons-format-status', 'dashicons-testimonial', 'dashicons-admin-comments', 'dashicons-email', 'dashicons-phone', 'dashicons-editor-help', 'dashicons-thumbs-up', 'dashicons-star-filled', 'dashicons-heart', 'dashicons-lightbulb', 'dashicons-bell', 'dashicons-admin-users', 'dashicons-feedback'];
-                foreach ($dashicons as $d):
-                    $active = ($d === $current_icon) ? ' style="border-color:#2271b1;background:#f0f6fc;"' : '';
-                ?>
-                <span class="ai-chatbot-fa-option" data-icon="<?php echo esc_attr($d); ?>"<?php echo $active; ?> title="<?php echo esc_attr($d); ?>">
-                    <span class="dashicons <?php echo esc_attr($d); ?>"></span>
-                </span>
-                <?php endforeach; ?>
-            </div>
         </div>
 
         <h4><?php esc_html_e('FAB Animation', 'wp-aigent'); ?></h4>

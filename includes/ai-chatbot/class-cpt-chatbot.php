@@ -20,7 +20,7 @@ class AI_Chatbot_CPT_Chatbot {
             'public'             => false,
             'show_ui'            => true,
             'show_in_menu'       => true,
-            'menu_icon'          => 'dashicons-format-chat',
+            'menu_icon'          => 'dashicons-email',
             'menu_position'      => 25,
             'supports'           => ['title'],
             'capability_type'    => 'post',
