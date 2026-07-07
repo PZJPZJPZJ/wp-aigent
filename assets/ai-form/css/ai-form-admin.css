@@ -1,0 +1,16 @@
+.wp-aigent-ai-form-admin .wp-aigent-settings-panel {
+    max-width: 860px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    margin-top: 16px;
+    padding: 18px 22px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-settings-panel h2 {
+    margin-top: 0;
+}
+
+.wp-aigent-ai-form-admin select {
+    min-width: 260px;
+}

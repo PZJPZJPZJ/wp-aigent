@@ -1,0 +1,9 @@
+[
+    {"path": "lead.lead_score", "type": "enum", "enum_values": "A|B|C|D|E", "description": "Lead score (A=complete lead: project is basically clear and has at least one contact method, B=interested lead: has at least one contact method and shows clear interest but project details are incomplete, C=contact only: has at least one contact method but no meaningful project details, D=project details only: has project requirements or project description but no contact method, E=general inquiry only: only asking general questions with no contact method and no clear project requirements)", "required": true},
+    {"path": "lead.name", "type": "string", "description": "Visitor name", "required": false},
+    {"path": "lead.email", "type": "string", "description": "Visitor email", "required": false},
+    {"path": "lead.whatsapp", "type": "string", "description": "Visitor WhatsApp", "required": false},
+    {"path": "lead.country", "type": "string", "description": "Visitor country", "required": false},
+    {"path": "lead.city", "type": "string", "description": "Visitor city", "required": false},
+    {"path": "lead.project_type", "type": "string", "description": "Project type/requirements", "required": false}
+]

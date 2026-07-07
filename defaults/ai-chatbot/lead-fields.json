@@ -1,0 +1,5 @@
+[
+    {"name": "name",    "placeholder": "Name"},
+    {"name": "email",   "placeholder": "Email"},
+    {"name": "whatsapp","placeholder": "WhatsApp"}
+]

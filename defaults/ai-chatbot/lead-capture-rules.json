@@ -1,0 +1,5 @@
+[
+    [
+        {"field": "lead.lead_score", "operator": "in", "value": "D"}
+    ]
+]
