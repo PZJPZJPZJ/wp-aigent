@@ -30,7 +30,7 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
                 'label_on'     => __('Yes', 'wp-aigent'),
                 'label_off'    => __('No', 'wp-aigent'),
                 'return_value' => 'yes',
-                'description'  => __('Requires Cloudflare and the Cloudflare IP Geolocation option enabled.', 'wp-aigent'),
+                'description'  => __('Auto-detects visitor country from Cloudflare edge (<code>/cdn-cgi/trace</code>) when Cloudflare is active.<br>Disable to always use the Default Country.', 'wp-aigent'),
                 'condition'    => [
                     'field_type' => $this->get_type(),
                 ],
@@ -68,13 +68,19 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
         $field_dom_id = 'form-field-' . $field_id;
         $default_country = WP_AIGent_Country_Resolver::normalize_country((string) ($item['wp_aigent_default_country'] ?? 'US')) ?: 'US';
         $use_cloudflare_country = ($item['wp_aigent_use_cf_ipcountry'] ?? 'yes') === 'yes';
-        $selected_country = WP_AIGent_Country_Resolver::resolve($default_country, $use_cloudflare_country);
+        // Always use the configured default at render time. When CF-IPCountry
+        // is enabled, the frontend JS (country-code.js) will fetch the real
+        // country from an uncached REST endpoint and update the select.
+        $selected_country = $default_country;
         $countries = WP_AIGent_Country_Resolver::country_options();
 
         $form->add_render_attribute('wp-aigent-country-code-' . $item_index, [
-            'name'  => $field_name,
-            'id'    => $field_dom_id,
-            'class' => 'elementor-field-textual elementor-field',
+            'name'                    => $field_name,
+            'id'                      => $field_dom_id,
+            'class'                   => 'elementor-field-textual elementor-field',
+            'data-wp-aigent-country-code' => '1',
+            'data-use-cf-ipcountry'       => $use_cloudflare_country ? '1' : '0',
+            'data-default-country'        => $default_country,
         ]);
 
         if (!empty($item['required'])) {

@@ -11,6 +11,8 @@ class WP_AIGent_AI_Form {
         $this->elementor_enhancer = new WP_AIGent_Elementor_Form_Enhancer();
         $this->elementor_enhancer->init();
 
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_country_code_scripts']);
+
         if (is_admin()) {
             add_action('admin_menu', [$this, 'add_admin_menu']);
             add_action('admin_init', [$this, 'register_settings']);
@@ -75,6 +77,28 @@ class WP_AIGent_AI_Form {
             WP_AIGENT_URL . 'assets/ai-form/css/ai-form-admin.css',
             [],
             WP_AIGENT_VERSION
+        );
+    }
+
+    /**
+     * Enqueue the country-code frontend script.
+     *
+     * Only loads when Elementor Form Enhancement is active. The script
+     * fetches the visitor's country from Cloudflare's /cdn-cgi/trace
+     * endpoint (no PHP involved) and updates the country-code select.
+     */
+    public function enqueue_country_code_scripts(): void {
+        $settings = self::get_settings();
+        if ($settings['elementor_enabled'] !== '1') {
+            return;
+        }
+
+        wp_enqueue_script(
+            'wp-aigent-country-code',
+            WP_AIGENT_URL . 'assets/ai-form/js/country-code.js',
+            [],
+            WP_AIGENT_VERSION,
+            ['strategy' => 'defer', 'in_footer' => true]
         );
     }
 
