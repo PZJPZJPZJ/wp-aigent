@@ -77,10 +77,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_ids',
             'chatbot_max_history',
             'chatbot_session_ttl',
-            'chatbot_greeting',
-            'chatbot_offline_msg',
-            'chatbot_avatar',
-            'chatbot_layout_mode',
             'chatbot_lead_fields',
             'chatbot_lead_score_rules',
             'chatbot_lead_capture_enabled',
@@ -91,29 +87,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_notify_rules',
             'chatbot_notify_inactivity_enabled',
             'chatbot_notify_inactivity_timeout',
-            'chatbot_i18n',
-            'chatbot_primary_color',
-            'chatbot_popup_color',
-            'chatbot_button_color',
-            'chatbot_fab_icon',
-            'chatbot_fab_ripple_enabled',
-            'chatbot_fab_ripple_color',
-            'chatbot_fab_ripple_opacity',
-            'chatbot_fab_ripple_speed',
-            'chatbot_fab_ripple_radius',
-            'chatbot_fab_icon_shake',
-            'chatbot_fab_hint',
-            'chatbot_fab_hint_position',
-            'chatbot_fab_hint_bg',
-            'chatbot_fab_hint_text',
-            'chatbot_fab_hint_font_size',
-            'chatbot_fab_default_open',
-            'chatbot_fab_open_delay',
-            'chatbot_popup_transition_duration',
-            'chatbot_open_cache_ttl',
-            'chatbot_fab_position',
-            'chatbot_fab_distance_x',
-            'chatbot_fab_distance_y',
         ];
 
         foreach ($fields as $field) {
@@ -193,7 +166,7 @@ class AI_Chatbot_CPT_Chatbot {
                     $value = $clean;
                 } elseif (is_array($value)) {
                     $value = array_map('sanitize_text_field', $value);
-                } elseif (in_array($field, ['chatbot_system_prompt', 'chatbot_ai_rules', 'chatbot_greeting', 'chatbot_offline_msg'], true)) {
+                } elseif (in_array($field, ['chatbot_system_prompt', 'chatbot_ai_rules'], true)) {
                     $value = sanitize_textarea_field($value);
                 } else {
                     $value = sanitize_text_field($value);
@@ -202,7 +175,7 @@ class AI_Chatbot_CPT_Chatbot {
                 update_post_meta($post_id, $field, $value);
             } else {
                 // Handle empty/unchecked fields (checkboxes etc.)
-                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_fab_ripple_enabled', 'chatbot_fab_icon_shake', 'chatbot_fab_default_open', 'chatbot_temperature_enabled', 'chatbot_thinking_enabled', 'chatbot_notify_inactivity_enabled'];
+                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_temperature_enabled', 'chatbot_thinking_enabled', 'chatbot_notify_inactivity_enabled'];
                 if ($field === 'chatbot_knowledge_ids') {
                     update_post_meta($post_id, $field, []);
                 } elseif (in_array($field, $checkbox_fields, true)) {
@@ -244,10 +217,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_ids'    => [],
             'chatbot_max_history'      => '10',
             'chatbot_session_ttl'      => '168',
-            'chatbot_greeting'         => 'Hello! How can I help you today?',
-            'chatbot_offline_msg'      => 'We are currently offline. Please leave a message.',
-            'chatbot_avatar'           => '',
-            'chatbot_layout_mode'      => 'inline',
             'chatbot_lead_fields'      => self::load_default_json('lead-fields.json', [
                 ['name' => 'name',    'placeholder' => 'Name'],
                 ['name' => 'email',   'placeholder' => 'Email'],
@@ -264,34 +233,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_notify_rules'   => self::load_default_json('notify-rules.json', []),
             'chatbot_notify_inactivity_enabled' => '0',
             'chatbot_notify_inactivity_timeout' => '1',
-            'chatbot_i18n'             => [
-                'title'             => 'Contact Us For Any Support',
-                'subtitle'          => 'Share Your Needs and We Will Contact You Within 24 Hours.',
-                'input_placeholder' => 'Type your message...',
-                'thinking_text'     => 'Thinking...',
-            ],
-            'chatbot_primary_color'    => '#25b366',
-            'chatbot_popup_color'      => '#25b366',
-            'chatbot_button_color'     => '#25b366',
-            'chatbot_fab_icon'         => 'fa-envelope',
-            'chatbot_fab_ripple_enabled' => '0',
-            'chatbot_fab_ripple_color'   => '#25b366',
-            'chatbot_fab_ripple_opacity' => '0.2',
-            'chatbot_fab_ripple_speed'   => '1',
-            'chatbot_fab_ripple_radius'  => '2.5',
-            'chatbot_fab_icon_shake'     => '0',
-            'chatbot_fab_hint'           => '',
-            'chatbot_fab_hint_position'  => 'left',
-            'chatbot_fab_hint_bg'        => '#ffffff',
-            'chatbot_fab_hint_text'      => '#333333',
-            'chatbot_fab_hint_font_size' => '15',
-            'chatbot_fab_default_open'   => '0',
-            'chatbot_fab_open_delay'     => '20',
-            'chatbot_popup_transition_duration' => '100',
-            'chatbot_open_cache_ttl'     => '1440',
-            'chatbot_fab_position'       => 'bottom-right',
-            'chatbot_fab_distance_x'     => '25',
-            'chatbot_fab_distance_y'     => '25',
         ];
     }
 
@@ -311,17 +252,6 @@ class AI_Chatbot_CPT_Chatbot {
         // Decrypt API key
         if (!empty($meta['chatbot_api_key'])) {
             $meta['chatbot_api_key'] = self::decrypt($meta['chatbot_api_key']);
-        }
-
-        // Backward compatibility: if old primary_color was customized but new color fields aren't saved
-        $raw_primary = isset($all_meta['chatbot_primary_color'][0]) ? $all_meta['chatbot_primary_color'][0] : '';
-        if ($raw_primary !== '' && $raw_primary !== $defaults['chatbot_primary_color']) {
-            if (!isset($all_meta['chatbot_popup_color'][0]) || $all_meta['chatbot_popup_color'][0] === '') {
-                $meta['chatbot_popup_color'] = $raw_primary;
-            }
-            if (!isset($all_meta['chatbot_button_color'][0]) || $all_meta['chatbot_button_color'][0] === '') {
-                $meta['chatbot_button_color'] = $raw_primary;
-            }
         }
 
         // Backward compat: migrate flat rules to grouped format

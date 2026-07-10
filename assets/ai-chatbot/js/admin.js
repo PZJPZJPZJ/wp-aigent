@@ -142,36 +142,6 @@
             $(this).closest('.ai-chatbot-condition-row').remove();
         });
 
-        // ===== Font Awesome Icon Selector =====
-        var $faInput = $('#chatbot_fab_icon');
-        var $faPreview = $('#ai-chatbot-fa-preview');
-
-        // Update preview when user types
-        $faInput.on('input', function() {
-            updateFaPreview($(this).val());
-        });
-
-        // Click an icon in the grid
-        $(document).on('click', '.ai-chatbot-fa-option', function() {
-            var icon = $(this).data('icon');
-            $faInput.val(icon);
-            $('.ai-chatbot-fa-option').css({'border-color':'#ccc','background':'#fff'});
-            $(this).css({'border-color':'#2271b1','background':'#f0f6fc'});
-            updateFaPreview(icon);
-        });
-
-        function updateFaPreview(icon) {
-            if (icon && icon.indexOf('fa-') === 0) {
-                $faPreview.html('<i class="fa ' + icon + '"></i>');
-            } else if (icon && icon.indexOf('dashicons-') === 0) {
-                $faPreview.html('<span class="dashicons ' + icon + '" style="font-size:24px;width:auto;height:auto;"></span>');
-            } else if (icon) {
-                $faPreview.html('<span style="font-size:20px;">' + icon + '</span>');
-            } else {
-                $faPreview.html('<span style="font-size:20px;">💬</span>');
-            }
-        }
-
         // ===== Lead Capture Form Fields Builder =====
         var $leadFieldsContainer = $('#js-lead-fields');
         var $leadFieldsTpl = $('#js-lead-field-tpl');
@@ -185,17 +155,6 @@
         $leadFieldsContainer.on('click', '.js-lead-field-remove', function() {
             $(this).closest('.js-lead-field-row').remove();
         });
-
-        // ===== Ripple settings toggle =====
-        var rippleToggle = document.querySelector('[name="chatbot_fab_ripple_enabled"]');
-        var rippleSettings = document.getElementById('ai-chatbot-ripple-settings');
-        function toggleRippleSettings() {
-            rippleSettings.style.display = rippleToggle && rippleToggle.checked ? 'flex' : 'none';
-        }
-        if (rippleToggle && rippleSettings) {
-            rippleToggle.addEventListener('change', toggleRippleSettings);
-            toggleRippleSettings();
-        }
 
         // ===== Optional Parameters toggles =====
         function bindOptionalToggle(checkboxName) {
@@ -238,26 +197,7 @@
                 });
             }
         }
-        bindRangeSlider('chatbot_fab_ripple_opacity', 'ai-chatbot-ripple-opacity-val');
-        bindRangeSlider('chatbot_fab_ripple_speed', 'ai-chatbot-ripple-speed-val', function(v) { return v + 's'; });
-        bindRangeSlider('chatbot_fab_ripple_radius', 'ai-chatbot-ripple-radius-val', function(v) { return v + 'x'; });
         bindRangeSlider('chatbot_temperature', 'ai-chatbot-temp-val');
-
-        // ===== Cache TTL & Open Delay toggle =====
-        var defaultOpenToggle = document.querySelector('[name="chatbot_fab_default_open"]');
-        var cacheTtlField = document.getElementById('ai-chatbot-cache-ttl-field');
-        var openDelayField = document.getElementById('ai-chatbot-open-delay-field');
-        var transitionField = document.getElementById('ai-chatbot-transition-field');
-        function toggleOpenFields() {
-            var show = defaultOpenToggle && defaultOpenToggle.checked;
-            if (cacheTtlField) cacheTtlField.style.display = show ? 'block' : 'none';
-            if (openDelayField) openDelayField.style.display = show ? 'block' : 'none';
-            if (transitionField) transitionField.style.display = show ? 'block' : 'none';
-        }
-        if (defaultOpenToggle) {
-            defaultOpenToggle.addEventListener('change', toggleOpenFields);
-            toggleOpenFields();
-        }
 
         // ===== Model Selects: Fetch, Populate, Custom Toggle =====
         var $modelSelect = $('#chatbot_model');

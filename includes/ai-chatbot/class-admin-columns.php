@@ -16,7 +16,6 @@ class AI_Chatbot_Admin_Columns {
     public function chatbot_columns(array $columns): array {
         $columns['platform'] = __('Platform', 'wp-aigent');
         $columns['model']    = __('Model', 'wp-aigent');
-        $columns['layout']   = __('Layout', 'wp-aigent');
         return $columns;
     }
 
@@ -28,9 +27,6 @@ class AI_Chatbot_Admin_Columns {
                 break;
             case 'model':
                 echo esc_html($config['chatbot_model'] ?? '—');
-                break;
-            case 'layout':
-                echo esc_html($config['chatbot_layout_mode'] ?? 'inline');
                 break;
         }
     }

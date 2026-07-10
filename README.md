@@ -47,36 +47,34 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 - **Notification history** — Full log with status tracking
 
 ### 🎨 Flexible Layout & Styling
-- **Inline mode** — embed the chatbot directly in page content
-- **Floating (FAB) mode** — popup with floating action button
-- **4 corner positions** — bottom-right, bottom-left, top-right, top-left
+- **Elementor-only widget** — place and style the chatbot from the Elementor editor
+- **Box mode** — embed the chatbot directly in page content
+- **Button mode** — popup opened from a visible action button
+- **Elementor positioning** — use Elementor's built-in positioning controls for button placement
 - **Custom color scheme** — independent header/popup and button colors
-- **FAB icon** — Font Awesome 4, Dashicons, or custom emoji
+- **Button icon** — Font Awesome 4, Dashicons, or custom emoji
 - **Ripple animation** — configurable color, opacity, speed, and radius
 - **Icon shake** — subtle vibration effect for attention
 - **Hint tooltip** — customizable position, colors, and font size
 - **Auto-open** — popup opens on page load; configurable delay and cache TTL
 - **Popup transition** — configurable fade-in/out duration (0–1000ms)
-- **Custom CSS/JS** — per-chatbot inline customizations
-- **Custom HTML template** — replace the default container markup
-- **Live preview** — see changes in real time on the admin edit screen
+- **Live Elementor preview** — widget controls update the editor preview in real time
 
 ### 🔧 Admin Experience
 - **Multi-bot management** — create individual chatbots with independent settings
-- **Tabbed configuration** — Basic, API Provider, System Prompt, Knowledge, Memory, Lead Capture, Notifications
+- **Tabbed configuration** — API Provider, System Prompt, Knowledge, Memory, Lead Capture, Notifications
 - **Model auto-fetch** — retrieves available models from the API automatically
 - **Custom model entry** — manually enter any model name
 - **JSON Schema Builder** — interactive UI to define structured lead data fields
 - **Rule builders** — visual OR/AND grouped rule editors (notifications + lead capture)
 - **Conversation viewer** — detailed read-only view with message history, lead data, token usage, and notification log
-- **Admin columns** — quick overview of platform, model, layout, lead score, and notification status
+- **Admin columns** — quick overview of platform, model, lead score, and notification status
 - **API Key encryption** — AES-256-CBC encrypted storage using WordPress salts
 - **Rate limiting** — 30 requests per minute per IP/session
 
 ### 🔌 Integration
 - **Elementor widget** — drag-and-drop integration with any Elementor page
 - **AI Form** — adds a Country Code field type to Elementor Forms with CF-IPCountry detection
-- **Shortcode** — `[ai_chatbot id="123"]` for any post/page content
 - **REST API** — `/ai-chat/v1/chat` and `/ai-chat/v1/history` endpoints
 - **Auto-update** — GitHub Release updater built-in (Update URI support)
 - **i18n-ready** — full text domain with customizable UI strings (title, subtitle, placeholder)
@@ -89,6 +87,7 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 |-------------|---------|
 | WordPress | 6.7+ |
 | PHP | 8.0+ |
+| Elementor | Active plugin |
 | AI API Key | OpenAI or Anthropic API key |
 
 ---
@@ -145,25 +144,24 @@ In the **System Prompt** tab:
 
 ### 5. Publish & Embed
 
-- **Shortcode**: `[ai_chatbot id="123"]`
-- **Elementor**: Add the AI Chatbot widget and select your chatbot.
-- **Inline mode** renders directly in the content area; **Floating mode** adds a clickable FAB.
+- Add the **AI Chatbot** Elementor widget to a page and select your chatbot.
+- Use **Box** mode to render the chat panel inline.
+- Use **Button** mode to render a clickable button and position it with Elementor's Advanced positioning controls.
 
 ---
 
 ## Configuration Reference
 
-### Basic Settings
+### Elementor Widget Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Greeting Message | First message sent to the visitor (Markdown supported) | `Hello! How can I help you today?` |
 | Offline Message | Message shown when offline | `We are currently offline. Please leave a message.` |
-| Layout Mode | `inline` (embedded) or `floating` (FAB popup) | `inline` |
-| FAB Position | Corner position for floating mode | `bottom-right` |
+| Layout Mode | `Box` (embedded) or `Button` (popup trigger) | `Button` |
 | Colors | Popup/Header and Button colors (independent) | `#25b366` |
-| FAB Icon | Font Awesome 4, Dashicons, or emoji | `fa-envelope` |
-| FAB Hint | Tooltip text next to the button | *(empty)* |
+| Button Icon | Elementor icon library selector | Envelope icon |
+| Button Hint | Optional tooltip next to the button | Off, text defaults to `Contact Us` |
 | Auto-Open | Open popup automatically on page load | Off |
 | Open Delay | Delay in seconds before auto-open | 20s |
 | Cache TTL | How long to remember closed state | 1440 min (24h) |
