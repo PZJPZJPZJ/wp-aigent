@@ -173,6 +173,7 @@
             const subtitle = this.escapeHtml(i18n.subtitle || 'Share Your Needs and We Will Contact You Within 24 Hours.');
             const placeholder = this.escapeAttr(i18n.input_placeholder || 'Type your message...');
             const closeLabel = this.escapeAttr('Close');
+            const sendIconHtml = '<span class="ai-chatbot-send-icon">' + this.renderSendIcon() + '</span>';
 
             let html = '';
             if (isButton) {
@@ -188,6 +189,7 @@
                 var shouldShowHint = this.config.fab_hint_enabled === '1' && this.config.fab_hint;
                 var hint = shouldShowHint ? '<div class="ai-chatbot-fab-hint ai-chatbot-fab-hint-' + this.escapeAttr(this.config.fab_hint_position || 'left') + '"><span>' + this.escapeHtml(this.config.fab_hint) + '</span></div>' : '';
                 var iconHtml = '<span class="ai-chatbot-fab-icon' + shakeClass + '">' + this.renderFabIcon() + '</span>';
+                var closeIconHtml = '<span class="ai-chatbot-close-icon">' + this.renderCloseIcon() + '</span>';
                 html = `
                     <div class="ai-chatbot-fab" data-widget="${this.escapeAttr(this.widgetId)}">
                         <button type="button" class="ai-chatbot-fab-button" aria-expanded="false">${rippleDivs}${iconHtml}</button>
@@ -197,12 +199,12 @@
                         <div class="ai-chatbot-header">
                             <span class="ai-chatbot-title">${title}</span>
                             <span class="ai-chatbot-subtitle">${subtitle}</span>
-                            <button type="button" class="ai-chatbot-close" aria-label="${closeLabel}">x</button>
+                            <button type="button" class="ai-chatbot-close" aria-label="${closeLabel}">${closeIconHtml}</button>
                         </div>
                         <div class="ai-chatbot-messages"></div>
                         <div class="ai-chatbot-input-area">
                             <textarea class="ai-chatbot-input" placeholder="${placeholder}" rows="1" maxlength="2000"></textarea>
-                            <button type="button" class="ai-chatbot-send">➤</button>
+                            <button type="button" class="ai-chatbot-send">${sendIconHtml}</button>
                         </div>
                     </div>
                 `;
@@ -216,7 +218,7 @@
                         <div class="ai-chatbot-messages"></div>
                         <div class="ai-chatbot-input-area">
                             <textarea class="ai-chatbot-input" placeholder="${placeholder}" rows="1" maxlength="2000"></textarea>
-                            <button type="button" class="ai-chatbot-send">➤</button>
+                            <button type="button" class="ai-chatbot-send">${sendIconHtml}</button>
                         </div>
                     </div>
                 `;
@@ -470,24 +472,36 @@
         }
 
         renderFabIcon() {
-            var iconHtml = this.config.fab_icon_html;
+            return this.renderIcon('fab_icon_html', 'fab_icon', 'fas fa-envelope');
+        }
+
+        renderCloseIcon() {
+            return this.renderIcon('close_icon_html', 'close_icon', 'fas fa-times');
+        }
+
+        renderSendIcon() {
+            return this.renderIcon('send_icon_html', 'send_icon', 'fas fa-paper-plane');
+        }
+
+        renderIcon(htmlKey, iconKey, fallbackClass) {
+            var iconHtml = this.config[htmlKey];
             if (iconHtml) {
                 return iconHtml;
             }
 
-            var icon = this.config.fab_icon;
+            var icon = this.config[iconKey];
             if (icon && typeof icon === 'object') {
                 icon = icon.value || '';
             }
 
             if (!icon) {
-                return '<i class="fas fa-envelope" aria-hidden="true"></i>';
+                return '<i class="' + this.escapeAttr(fallbackClass) + '" aria-hidden="true"></i>';
             }
             if (typeof icon === 'string' && icon.indexOf('dashicons-') === 0) {
                 return '<span class="dashicons ' + this.escapeAttr(icon) + '"></span>';
             }
             if (typeof icon !== 'string') {
-                return '<i class="fas fa-envelope" aria-hidden="true"></i>';
+                return '<i class="' + this.escapeAttr(fallbackClass) + '" aria-hidden="true"></i>';
             }
             return '<i class="' + this.escapeAttr(icon) + '" aria-hidden="true"></i>';
         }

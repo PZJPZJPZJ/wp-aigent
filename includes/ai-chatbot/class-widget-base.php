@@ -101,7 +101,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         $this->add_live_control('thinking_text', [
             'label'   => __('Thinking Text', 'wp-aigent'),
             'type'    => \Elementor\Controls_Manager::TEXT,
-            'default' => 'Thinking...',
+            'default' => '',
         ]);
 
         $this->end_controls_section();
@@ -162,6 +162,25 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             'max'       => 1000,
             'step'      => 10,
             'default'   => 100,
+            'condition' => ['layout_mode' => 'button'],
+        ]);
+
+        $this->add_live_control('send_icon', [
+            'label'   => __('Send Icon', 'wp-aigent'),
+            'type'    => \Elementor\Controls_Manager::ICONS,
+            'default' => [
+                'value'   => 'fas fa-paper-plane',
+                'library' => 'fa-solid',
+            ],
+        ]);
+
+        $this->add_live_control('close_icon', [
+            'label'     => __('Close Icon', 'wp-aigent'),
+            'type'      => \Elementor\Controls_Manager::ICONS,
+            'default'   => [
+                'value'   => 'fas fa-times',
+                'library' => 'fa-solid',
+            ],
             'condition' => ['layout_mode' => 'button'],
         ]);
 
@@ -341,7 +360,9 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         $widget_id = $this->get_id();
         $container_id = 'ai-chatbot-container-' . $widget_id;
         $config = $this->build_frontend_config($chatbot_id, $widget_id, $settings, $bot_config);
-        $config['fab_icon_html'] = $this->render_icon_html($settings['button_icon'] ?? []);
+        $config['fab_icon_html'] = $this->render_icon_html($settings['button_icon'] ?? [], 'fas fa-envelope');
+        $config['send_icon_html'] = $this->render_icon_html($settings['send_icon'] ?? [], 'fas fa-paper-plane');
+        $config['close_icon_html'] = $this->render_icon_html($settings['close_icon'] ?? [], 'fas fa-times');
 
         $config_json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
         $config_hash = md5((string) $config_json);
@@ -376,8 +397,12 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
                 'input_placeholder' => (string) ($settings['input_placeholder'] ?? ''),
                 'thinking_text'     => (string) ($settings['thinking_text'] ?? ''),
             ],
-            'fab_icon'      => $this->normalize_icon_setting($settings['button_icon'] ?? []),
+            'fab_icon'      => $this->normalize_icon_setting($settings['button_icon'] ?? [], 'fas fa-envelope'),
             'fab_icon_html' => '',
+            'send_icon'      => $this->normalize_icon_setting($settings['send_icon'] ?? [], 'fas fa-paper-plane'),
+            'send_icon_html' => '',
+            'close_icon'      => $this->normalize_icon_setting($settings['close_icon'] ?? [], 'fas fa-times'),
+            'close_icon_html' => '',
             'ripple_enabled' => !empty($settings['ripple_enabled']) ? '1' : '0',
             'ripple_color'   => (string) ($settings['ripple_color'] ?? ''),
             'ripple_opacity' => $ripple_opacity,
@@ -397,7 +422,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         ];
     }
 
-    private function normalize_icon_setting($icon): array {
+    private function normalize_icon_setting($icon, string $default_value): array {
         if (is_array($icon) && !empty($icon['value'])) {
             return [
                 'value'   => $icon['value'],
@@ -406,13 +431,13 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         }
 
         return [
-            'value'   => 'fas fa-envelope',
+            'value'   => $default_value,
             'library' => 'fa-solid',
         ];
     }
 
-    private function render_icon_html($icon): string {
-        $icon = $this->normalize_icon_setting($icon);
+    private function render_icon_html($icon, string $default_value): string {
+        $icon = $this->normalize_icon_setting($icon, $default_value);
 
         ob_start();
         \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
@@ -422,7 +447,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             return $html;
         }
 
-        return '<i class="fas fa-envelope" aria-hidden="true"></i>';
+        return '<i class="' . esc_attr($default_value) . '" aria-hidden="true"></i>';
     }
 
     protected function content_template(): void {
@@ -443,21 +468,44 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             value: 'fas fa-envelope',
             library: 'fa-solid'
         };
-        var buttonIcon = settings.button_icon && settings.button_icon.value ? settings.button_icon : defaultIcon;
-        var iconHTML = '';
-        if (typeof elementor !== 'undefined' && elementor.helpers && elementor.helpers.renderIcon) {
-            try {
-                var renderedIcon = elementor.helpers.renderIcon(view, buttonIcon, {'aria-hidden': true}, 'i', 'object');
-                if (renderedIcon && renderedIcon.rendered) {
-                    iconHTML = renderedIcon.value;
+        var defaultCloseIcon = {
+            value: 'fas fa-times',
+            library: 'fa-solid'
+        };
+        var defaultSendIcon = {
+            value: 'fas fa-paper-plane',
+            library: 'fa-solid'
+        };
+        var renderElementorIcon = function(icon, fallbackClass) {
+            var iconData = icon && icon.value ? icon : {
+                value: fallbackClass,
+                library: 'fa-solid'
+            };
+            var iconHTML = '';
+            if (typeof elementor !== 'undefined' && elementor.helpers && elementor.helpers.renderIcon) {
+                try {
+                    var renderedIcon = elementor.helpers.renderIcon(view, iconData, {'aria-hidden': true}, 'i', 'object');
+                    if (renderedIcon && renderedIcon.rendered) {
+                        iconHTML = renderedIcon.value;
+                    }
+                } catch (e) {
+                    iconHTML = '';
                 }
-            } catch (e) {
-                iconHTML = '';
             }
-        }
-        if (!iconHTML && typeof buttonIcon.value === 'string' && buttonIcon.value) {
-            iconHTML = '<i class="' + _.escape(buttonIcon.value) + '" aria-hidden="true"></i>';
-        }
+            if (!iconHTML && typeof iconData.value === 'string' && iconData.value) {
+                iconHTML = '<i class="' + _.escape(iconData.value) + '" aria-hidden="true"></i>';
+            }
+            return {
+                icon: iconData,
+                html: iconHTML
+            };
+        };
+        var buttonIcon = settings.button_icon && settings.button_icon.value ? settings.button_icon : defaultIcon;
+        var sendIcon = settings.send_icon && settings.send_icon.value ? settings.send_icon : defaultSendIcon;
+        var closeIcon = settings.close_icon && settings.close_icon.value ? settings.close_icon : defaultCloseIcon;
+        var buttonIconRendered = renderElementorIcon(buttonIcon, 'fas fa-envelope');
+        var sendIconRendered = renderElementorIcon(sendIcon, 'fas fa-paper-plane');
+        var closeIconRendered = renderElementorIcon(closeIcon, 'fas fa-times');
         var config = {
             chatbot_id: settings.chatbot_id || '',
             session_id: '',
@@ -473,8 +521,12 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
                 input_placeholder: settings.input_placeholder || '',
                 thinking_text: settings.thinking_text || ''
             },
-            fab_icon: buttonIcon,
-            fab_icon_html: iconHTML,
+            fab_icon: buttonIconRendered.icon,
+            fab_icon_html: buttonIconRendered.html,
+            send_icon: sendIconRendered.icon,
+            send_icon_html: sendIconRendered.html,
+            close_icon: closeIconRendered.icon,
+            close_icon_html: closeIconRendered.html,
             ripple_enabled: settings.ripple_enabled ? '1' : '0',
             ripple_color: settings.ripple_color || '',
             ripple_opacity: sliderSize(settings.ripple_opacity, '0.2'),

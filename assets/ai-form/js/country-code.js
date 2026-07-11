@@ -10,14 +10,43 @@
 (function () {
     'use strict';
 
+    function getCountryCodeSelects(scope) {
+        var root = scope && scope.querySelectorAll ? scope : document;
+        var selector = 'select[data-wp-aigent-country-code="1"]';
+        var selects = [];
+
+        if (root.matches && root.matches(selector)) {
+            selects.push(root);
+        }
+
+        root.querySelectorAll(selector).forEach(function (select) {
+            selects.push(select);
+        });
+
+        return selects;
+    }
+
+    function isElementorEditMode() {
+        return typeof elementorFrontend !== 'undefined'
+            && typeof elementorFrontend.isEditMode === 'function'
+            && elementorFrontend.isEditMode();
+    }
+
     /**
-     * Find all country-code selects with CF detection enabled and update them.
+     * Find all country-code selects and update them for the current render.
      */
-    function updateCountryCodes() {
-        var selects = document.querySelectorAll(
-            'select[data-wp-aigent-country-code="1"][data-use-cf-ipcountry="1"]'
-        );
+    function updateCountryCodes(scope) {
+        var selects = getCountryCodeSelects(scope);
         if (selects.length === 0) {
+            return;
+        }
+
+        applyDefaultCountries(selects);
+
+        var cloudflareSelects = selects.filter(function (select) {
+            return select.getAttribute('data-use-cf-ipcountry') === '1';
+        });
+        if (cloudflareSelects.length === 0 || isElementorEditMode()) {
             return;
         }
 
@@ -33,12 +62,31 @@
                 if (!match) {
                     return;
                 }
-                selectCountry(selects, match[1]);
+                selectCountry(cloudflareSelects, match[1]);
             })
             .catch(function () {
                 // Silently fail — not behind Cloudflare or request blocked.
                 // The select keeps the configured Default Country.
             });
+    }
+
+    /**
+     * In Elementor editor, show the configured default immediately whenever
+     * the Form widget re-renders. On the public page this is also the fallback
+     * before CF detection finishes.
+     *
+     * @param {HTMLElement[]} selects
+     */
+    function applyDefaultCountries(selects) {
+        for (var i = 0; i < selects.length; i++) {
+            if (!selects[i]) {
+                continue;
+            }
+            var defaultCountry = selects[i].getAttribute('data-default-country');
+            if (defaultCountry) {
+                selectCountry([selects[i]], defaultCountry);
+            }
+        }
     }
 
     /**
@@ -63,8 +111,31 @@
 
     // Run after the DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateCountryCodes);
+        document.addEventListener('DOMContentLoaded', function () {
+            updateCountryCodes(document);
+        });
     } else {
-        updateCountryCodes();
+        updateCountryCodes(document);
     }
+
+    function bindElementorHooks() {
+        if (typeof elementorFrontend === 'undefined' || !elementorFrontend.hooks) {
+            return;
+        }
+
+        if (window.wpAigentCountryCodeElementorHookBound) {
+            return;
+        }
+
+        elementorFrontend.hooks.addAction('frontend/element_ready/form.default', function ($scope) {
+            var scopeEl = $scope && $scope[0] ? $scope[0] : document;
+            updateCountryCodes(scopeEl);
+        });
+        window.wpAigentCountryCodeElementorHookBound = true;
+    }
+
+    if (window.jQuery) {
+        jQuery(window).on('elementor/frontend/init', bindElementorHooks);
+    }
+    bindElementorHooks();
 })();

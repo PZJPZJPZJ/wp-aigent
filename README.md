@@ -74,7 +74,7 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 
 ### 🔌 Integration
 - **Elementor widget** — drag-and-drop integration with any Elementor page
-- **AI Form** — adds a Country Code field type to Elementor Forms with CF-IPCountry detection
+- **AI Forms** — adds a Country Code field type to Elementor Forms with CF-IPCountry detection
 - **REST API** — `/ai-chat/v1/chat` and `/ai-chat/v1/history` endpoints
 - **Auto-update** — GitHub Release updater built-in (Update URI support)
 - **i18n-ready** — full text domain with customizable UI strings (title, subtitle, placeholder)
@@ -158,9 +158,12 @@ In the **System Prompt** tab:
 |---------|-------------|---------|
 | Greeting Message | First message sent to the visitor (Markdown supported) | `Hello! How can I help you today?` |
 | Offline Message | Message shown when offline | `We are currently offline. Please leave a message.` |
+| Thinking Text | Optional text shown beside typing dots | *(empty)* |
 | Layout Mode | `Box` (embedded) or `Button` (popup trigger) | `Button` |
 | Colors | Popup/Header and Button colors (independent) | `#25b366` |
 | Button Icon | Elementor icon library selector | Envelope icon |
+| Send Icon | Elementor icon library selector | Paper plane icon |
+| Close Icon | Elementor icon library selector | Times icon |
 | Button Hint | Optional tooltip next to the button | Off, text defaults to `Contact Us` |
 | Auto-Open | Open popup automatically on page load | Off |
 | Open Delay | Delay in seconds before auto-open | 20s |

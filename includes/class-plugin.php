@@ -35,7 +35,7 @@ class WP_AIGent_Plugin {
         // Widget (Elementor integration)
         require_once $includes . 'ai-chatbot/class-widget.php';
 
-        // AI Form module
+        // AI Forms module
         require_once $includes . 'ai-form/class-country-resolver.php';
         require_once $includes . 'ai-form/class-elementor-form-enhancer.php';
         require_once $includes . 'ai-form/class-ai-form.php';

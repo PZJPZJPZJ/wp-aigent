@@ -11,6 +11,12 @@
     margin-top: 0;
 }
 
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 8px;
+}
+
 .wp-aigent-ai-form-admin select {
     min-width: 260px;
 }

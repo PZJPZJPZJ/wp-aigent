@@ -30,6 +30,7 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
                 'label_on'     => __('Yes', 'wp-aigent'),
                 'label_off'    => __('No', 'wp-aigent'),
                 'return_value' => 'yes',
+                'render_type'  => 'template',
                 'description'  => __('Auto-detects visitor country from Cloudflare edge (<code>/cdn-cgi/trace</code>) when Cloudflare is active.<br>Disable to always use the Default Country.', 'wp-aigent'),
                 'condition'    => [
                     'field_type' => $this->get_type(),
@@ -44,6 +45,7 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
                 'type'         => \Elementor\Controls_Manager::SELECT,
                 'default'      => 'US',
                 'options'      => WP_AIGent_Country_Resolver::country_select_options(),
+                'render_type'  => 'template',
                 'condition'    => [
                     'field_type' => $this->get_type(),
                 ],
