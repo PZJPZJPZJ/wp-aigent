@@ -97,19 +97,34 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
         echo '<select ' . $form->get_render_attribute_string('wp-aigent-country-code-' . $item_index) . '>';
         foreach ($countries as $country_code => $country) {
             $dial = $country['dial'] ?? '';
-            $name = $country['name'] ?? $country_code;
-            if ($dial === '') {
-                continue;
-            }
+            $label = WP_AIGent_Country_Resolver::format_country_display($country_code, $country);
 
             printf(
-                '<option value="%1$s" data-country="%2$s"%3$s>%4$s</option>',
-                esc_attr($dial),
+                '<option value="%1$s" data-country="%2$s" data-dial="%3$s"%4$s>%5$s</option>',
                 esc_attr($country_code),
+                esc_attr($country_code),
+                esc_attr($dial),
                 selected($selected_country, $country_code, false),
-                esc_html($name . ' (' . $dial . ')')
+                esc_html($label)
             );
         }
         echo '</select>';
+    }
+
+    public function validation($field, $record, $ajax_handler) {
+        $value = isset($field['value']) ? (string) $field['value'] : '';
+
+        if ($value === '') {
+            return;
+        }
+
+        if (WP_AIGent_Country_Resolver::normalize_country($value) !== '') {
+            return;
+        }
+
+        if (is_object($ajax_handler) && method_exists($ajax_handler, 'add_error')) {
+            $field_id = (string) ($field['id'] ?? '');
+            $ajax_handler->add_error($field_id, __('Please select a valid country/region.', 'wp-aigent'));
+        }
     }
 }

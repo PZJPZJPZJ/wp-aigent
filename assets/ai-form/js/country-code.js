@@ -58,8 +58,11 @@
                 return response.text();
             })
             .then(function (text) {
-                var match = text.match(/^loc=([A-Z]{2})$/m);
+                var match = text.match(/^loc=([A-Z0-9]{2})$/m);
                 if (!match) {
+                    return;
+                }
+                if (match[1] === 'XX' || match[1] === 'T1') {
                     return;
                 }
                 selectCountry(cloudflareSelects, match[1]);

@@ -151,9 +151,10 @@ class WP_AIGent_AI_Form {
                 <?php settings_fields('wp_aigent_ai_form'); ?>
 
                 <div class="wp-aigent-settings-panel">
-                    <h2><?php esc_html_e('Add Country Code field type', 'wp-aigent'); ?></h2>
+                    <h2><?php esc_html_e('Elementor Form Enhancer', 'wp-aigent'); ?></h2>
                     <label class="wp-aigent-checkbox-row">
                         <input type="checkbox" name="<?php echo esc_attr(self::OPTION_NAME); ?>[elementor_enabled]" value="1" aria-label="<?php esc_attr_e('Enable Add Country Code field type', 'wp-aigent'); ?>" <?php checked($settings['elementor_enabled'], '1'); ?>>
+                        <strong><?php esc_html_e('Add Country Code field type', 'wp-aigent'); ?></strong>
                     </label>
                 </div>
 

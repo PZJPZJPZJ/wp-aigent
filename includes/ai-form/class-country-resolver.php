@@ -46,12 +46,27 @@ class WP_AIGent_Country_Resolver {
     public static function country_select_options(): array {
         $options = [];
         foreach (self::country_options() as $country_code => $country) {
-            $dial = $country['dial'] ?? '';
-            $name = $country['name'] ?? $country_code;
-            $options[$country_code] = $name . ' (' . $dial . ')';
+            $options[$country_code] = self::format_country_display($country_code, $country);
         }
 
         return $options;
+    }
+
+    public static function format_country_display(string $country_code, ?array $country = null): string {
+        $country_code = self::normalize_country($country_code);
+        if ($country_code === '') {
+            return '';
+        }
+
+        if ($country === null) {
+            $countries = self::countries();
+            $country = $countries[$country_code] ?? [];
+        }
+
+        $name = (string) ($country['name'] ?? $country_code);
+        $dial = trim((string) ($country['dial'] ?? ''));
+
+        return $name . ' (' . ($dial !== '' ? $dial : 'N/A') . ')';
     }
 
     public static function countries(): array {

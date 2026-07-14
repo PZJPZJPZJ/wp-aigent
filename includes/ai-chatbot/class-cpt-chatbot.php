@@ -3,7 +3,7 @@ defined('ABSPATH') || exit;
 
 class AI_Chatbot_CPT_Chatbot {
 
-    private const DEFAULTS_DIR = WP_AIGENT_PATH . 'defaults/ai-chatbot';
+    private const DEFAULTS_DIR = WP_AIGENT_PATH . 'templates/ai-chatbot/defaults';
 
     public static function register(): void {
         register_post_type('ai_chatbot', [

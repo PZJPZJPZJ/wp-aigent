@@ -1,5 +1,0 @@
-[
-    [
-        {"field": "lead.lead_score", "operator": "changed", "value": "A,B,C"}
-    ]
-]
