@@ -5,7 +5,6 @@ class WP_AIGent_Elementor_Form_Enhancer {
 
     public function init(): void {
         add_action('elementor_pro/forms/fields/register', [$this, 'register_country_code_field']);
-        add_action('elementor_pro/forms/process', [$this, 'format_country_code_submission'], 5, 2);
         add_action('elementor_pro/forms/new_record', [$this, 'format_country_code_submission'], 5, 2);
     }
 
@@ -75,7 +74,7 @@ class WP_AIGent_Elementor_Form_Enhancer {
                 continue;
             }
 
-            $country_code = WP_AIGent_Country_Resolver::normalize_country((string) $field[$key]);
+            $country_code = WP_AIGent_Country_Resolver::country_from_submitted_value((string) $field[$key]);
             if ($country_code !== '') {
                 return $country_code;
             }

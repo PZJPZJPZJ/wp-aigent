@@ -65,7 +65,11 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
     }
 
     public function render($item, $item_index, $form) {
-        $field_id = !empty($item['custom_id']) ? sanitize_key($item['custom_id']) : 'country_code';
+        $field_id = !empty($item['custom_id']) ? sanitize_text_field((string) $item['custom_id']) : 'country_code';
+        if ($field_id === '') {
+            $field_id = 'country_code';
+        }
+
         $field_name = 'form_fields[' . $field_id . ']';
         $field_dom_id = 'form-field-' . $field_id;
         $default_country = WP_AIGent_Country_Resolver::normalize_country((string) ($item['wp_aigent_default_country'] ?? 'US')) ?: 'US';
@@ -101,7 +105,7 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
 
             printf(
                 '<option value="%1$s" data-country="%2$s" data-dial="%3$s"%4$s>%5$s</option>',
-                esc_attr($country_code),
+                esc_attr($label),
                 esc_attr($country_code),
                 esc_attr($dial),
                 selected($selected_country, $country_code, false),
@@ -112,18 +116,42 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
     }
 
     public function validation($field, $record, $ajax_handler) {
-        $value = isset($field['value']) ? (string) $field['value'] : '';
+        $value = $this->extract_country_code_from_field((array) $field);
 
         if ($value === '') {
+            $submitted_value = isset($field['value']) && !is_array($field['value']) ? (string) $field['value'] : '';
+            if ($submitted_value !== '') {
+                $this->add_validation_error($field, $ajax_handler);
+            }
             return;
         }
 
-        if (WP_AIGent_Country_Resolver::normalize_country($value) !== '') {
-            return;
+        return;
+    }
+
+    private function extract_country_code_from_field(array $field): string {
+        foreach (['raw_value', 'value'] as $key) {
+            if (!isset($field[$key]) || is_array($field[$key])) {
+                continue;
+            }
+
+            $value = (string) $field[$key];
+            $country_code = WP_AIGent_Country_Resolver::country_from_submitted_value($value);
+            if ($country_code !== '') {
+                return $country_code;
+            }
         }
 
+        return '';
+    }
+
+    private function add_validation_error(array $field, $ajax_handler): void {
         if (is_object($ajax_handler) && method_exists($ajax_handler, 'add_error')) {
             $field_id = (string) ($field['id'] ?? '');
+            if ($field_id === '') {
+                return;
+            }
+
             $ajax_handler->add_error($field_id, __('Please select a valid country/region.', 'wp-aigent'));
         }
     }

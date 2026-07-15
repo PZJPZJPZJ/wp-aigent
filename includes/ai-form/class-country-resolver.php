@@ -69,6 +69,26 @@ class WP_AIGent_Country_Resolver {
         return $name . ' (' . ($dial !== '' ? $dial : 'N/A') . ')';
     }
 
+    public static function country_from_submitted_value(string $value): string {
+        $value = trim(sanitize_text_field($value));
+        if ($value === '') {
+            return '';
+        }
+
+        $country_code = self::normalize_country($value);
+        if ($country_code !== '') {
+            return $country_code;
+        }
+
+        foreach (self::countries() as $code => $country) {
+            if ($value === self::format_country_display($code, $country)) {
+                return $code;
+            }
+        }
+
+        return '';
+    }
+
     public static function countries(): array {
         $countries = include WP_AIGENT_PATH . 'templates/ai-form/country-codes.php';
         if (!is_array($countries)) {
