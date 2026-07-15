@@ -12,7 +12,9 @@ class WP_AIGent_AI_Form {
         $this->elementor_enhancer->init();
 
         add_action('wp_enqueue_scripts', [$this, 'enqueue_country_code_scripts']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_elementor_form_tracking_scripts']);
         add_action('elementor/frontend/after_enqueue_scripts', [$this, 'enqueue_country_code_scripts']);
+        add_action('elementor/frontend/after_enqueue_scripts', [$this, 'enqueue_elementor_form_tracking_scripts']);
 
         if (is_admin()) {
             add_action('admin_menu', [$this, 'add_admin_menu']);
@@ -24,7 +26,8 @@ class WP_AIGent_AI_Form {
 
     public static function defaults(): array {
         return [
-            'elementor_enabled' => '0',
+            'elementor_enabled'          => '0',
+            'elementor_tracking_enabled' => '0',
         ];
     }
 
@@ -91,7 +94,8 @@ class WP_AIGent_AI_Form {
         $input = is_array($input) ? $input : [];
 
         return [
-            'elementor_enabled' => !empty($input['elementor_enabled']) ? '1' : '0',
+            'elementor_enabled'          => !empty($input['elementor_enabled']) ? '1' : '0',
+            'elementor_tracking_enabled' => !empty($input['elementor_tracking_enabled']) ? '1' : '0',
         ];
     }
 
@@ -131,6 +135,24 @@ class WP_AIGent_AI_Form {
         );
     }
 
+    /**
+     * Enqueue Elementor form successful-submission tracking.
+     */
+    public function enqueue_elementor_form_tracking_scripts(): void {
+        $settings = self::get_settings();
+        if ($settings['elementor_tracking_enabled'] !== '1') {
+            return;
+        }
+
+        wp_enqueue_script(
+            'wp-aigent-elementor-form-tracking',
+            WP_AIGENT_URL . 'assets/ai-form/js/elementor-form-tracking.js',
+            ['jquery'],
+            $this->asset_version('assets/ai-form/js/elementor-form-tracking.js'),
+            ['strategy' => 'defer', 'in_footer' => true]
+        );
+    }
+
     private function asset_version(string $relative_path): string {
         $path = WP_AIGENT_PATH . ltrim($relative_path, '/\\');
         $mtime = is_readable($path) ? filemtime($path) : false;
@@ -152,10 +174,19 @@ class WP_AIGent_AI_Form {
 
                 <div class="wp-aigent-settings-panel">
                     <h2><?php esc_html_e('Elementor Form Enhancer', 'wp-aigent'); ?></h2>
-                    <label class="wp-aigent-checkbox-row">
-                        <input type="checkbox" name="<?php echo esc_attr(self::OPTION_NAME); ?>[elementor_enabled]" value="1" aria-label="<?php esc_attr_e('Enable Add Country Code field type', 'wp-aigent'); ?>" <?php checked($settings['elementor_enabled'], '1'); ?>>
-                        <strong><?php esc_html_e('Add Country Code field type', 'wp-aigent'); ?></strong>
-                    </label>
+                    <div class="wp-aigent-checkbox-list">
+                        <label class="wp-aigent-checkbox-row">
+                            <input type="checkbox" name="<?php echo esc_attr(self::OPTION_NAME); ?>[elementor_enabled]" value="1" aria-label="<?php esc_attr_e('Enable Add Country Code field type', 'wp-aigent'); ?>" <?php checked($settings['elementor_enabled'], '1'); ?>>
+                            <strong><?php esc_html_e('Add Country Code field type', 'wp-aigent'); ?></strong>
+                        </label>
+                        <label class="wp-aigent-checkbox-row">
+                            <input type="checkbox" name="<?php echo esc_attr(self::OPTION_NAME); ?>[elementor_tracking_enabled]" value="1" aria-label="<?php esc_attr_e('Enable dataLayer tracking for successful Elementor form submissions', 'wp-aigent'); ?>" <?php checked($settings['elementor_tracking_enabled'], '1'); ?>>
+                            <span>
+                                <strong><?php esc_html_e('Track successful Elementor form submissions to dataLayer', 'wp-aigent'); ?></strong>
+                                <span class="description"><?php esc_html_e('Pushes the elementor_form_submit_success event after an Elementor form submits successfully.', 'wp-aigent'); ?></span>
+                            </span>
+                        </label>
+                    </div>
                 </div>
 
                 <?php submit_button(); ?>

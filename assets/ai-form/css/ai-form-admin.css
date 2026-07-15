@@ -11,12 +11,27 @@
     margin: 0 0 12px;
 }
 
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .wp-aigent-ai-form-admin .wp-aigent-checkbox-row {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    align-items: flex-start;
     gap: 8px;
     margin: 0;
     font-size: 14px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row input[type="checkbox"] {
+    margin-top: 1px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row .description {
+    display: block;
+    margin-top: 3px;
 }
 
 .wp-aigent-ai-form-admin select {
