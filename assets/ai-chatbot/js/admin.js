@@ -20,28 +20,6 @@
             $('.ai-chatbot-tab-panel[data-tab="' + tab + '"]').addClass('active');
         });
 
-        // ===== Auto-fill API base URL on platform change =====
-        var $platform = $('#chatbot_platform');
-        var $apiUrl = $('#chatbot_api_base_url');
-        var platformUrls = {
-            'openai':    'https://api.openai.com/v1',
-            'anthropic': 'https://api.anthropic.com/v1',
-        };
-        $platform.on('change', function() {
-            var url = platformUrls[$(this).val()];
-            if (url && $apiUrl.val() !== '') {
-                var current = $apiUrl.val().replace(/\/+$/, '');
-                var isDefault = Object.values(platformUrls).some(function(v) {
-                    return v && current === v.replace(/\/+$/, '');
-                });
-                if (isDefault || current === '') {
-                    $apiUrl.val(url);
-                }
-            } else if (url && $apiUrl.val() === '') {
-                $apiUrl.val(url);
-            }
-        });
-
         // ===== JSON Schema Builder =====
         var $schemaContainer = $('#js-schema-fields');
         var $template = $('#js-schema-row-tpl');
@@ -199,130 +177,41 @@
         }
         bindRangeSlider('chatbot_temperature', 'ai-chatbot-temp-val');
 
-        // ===== Model Selects: Fetch, Populate, Custom Toggle =====
-        var $modelSelect = $('#chatbot_model');
-        var $modelHidden = $('#chatbot_model_hidden');
-        var $modelCustom = $('#chatbot_model_custom');
-        var $modelCustomWrap = $('#chatbot-model-custom-wrap');
-        var $fallbackSelect = $('#chatbot_fallback_model');
-        var $fallbackHidden = $('#chatbot_fallback_model_hidden');
-        var $fallbackCustom = $('#chatbot_fallback_model_custom');
-        var $fallbackCustomWrap = $('#chatbot-fallback-model-custom-wrap');
-        var $platformSelect = $('#chatbot_platform');
+        // ===== Model Selects: Read Saved Provider Models =====
+        var modelControls = [
+            {
+                provider: $('#chatbot_primary_provider_id'),
+                select: $('#chatbot_primary_model')
+            },
+            {
+                provider: $('#chatbot_fallback_provider_id'),
+                select: $('#chatbot_fallback_model')
+            }
+        ];
 
-        function populateModelSelects(models) {
-            var currentModel = $modelHidden.val();
-            var currentFallback = $fallbackHidden.val();
+        function populateModelSelect(control) {
+            var models = (config.providerModels && config.providerModels[control.provider.val()]) || [];
+            var currentModel = control.select.data('selected') || control.select.val();
 
-            [$modelSelect, $fallbackSelect].forEach(function($sel) {
-                var val = $sel.is($modelSelect) ? currentModel : currentFallback;
-                $sel.find('option:not([value=""]):not([value="__custom__"])').remove();
-                $.each(models, function(i, m) {
-                    if ($sel.find('option[value="' + m.replace(/"/g, '&quot;') + '"]').length === 0) {
-                        $sel.append($('<option>').val(m).text(m));
-                    }
-                });
-                if (val && models.indexOf(val) !== -1) {
-                    $sel.val(val);
-                    showCustomInput($sel);
-                } else if (val && models.indexOf(val) === -1) {
-                    $sel.val('__custom__');
-                    showCustomInput($sel);
-                } else {
-                    $sel.val('');
-                }
+            control.select.find('option:not([value=""])').remove();
+            $.each(models, function(_, model) {
+                control.select.append($('<option>').val(model).text(model));
             });
-        }
 
-        function showCustomInput($sel) {
-            var isModel = $sel.is($modelSelect);
-            var $wrap = isModel ? $modelCustomWrap : $fallbackCustomWrap;
-            var $input = isModel ? $modelCustom : $fallbackCustom;
-            var $hidden = isModel ? $modelHidden : $fallbackHidden;
-            var val = $hidden.val();
-            if ($sel.val() === '__custom__') {
-                $wrap.show();
-                $input.val(val);
+            if (models.indexOf(currentModel) !== -1) {
+                control.select.val(currentModel);
             } else {
-                $wrap.hide();
+                control.select.val('');
             }
+            control.select.removeData('selected');
         }
 
-        function syncHiddenFromSelect($sel) {
-            var isModel = $sel.is($modelSelect);
-            var $hidden = isModel ? $modelHidden : $fallbackHidden;
-            var $input = isModel ? $modelCustom : $fallbackCustom;
-            var $wrap = isModel ? $modelCustomWrap : $fallbackCustomWrap;
-
-            if ($sel.val() === '__custom__') {
-                $wrap.show();
-                $input.val('').focus();
-                $hidden.val('');
-            } else {
-                $wrap.hide();
-                $hidden.val($sel.val());
-            }
-        }
-
-        function syncHiddenFromCustom($input) {
-            var isModel = $input.is($modelCustom);
-            var $hidden = isModel ? $modelHidden : $fallbackHidden;
-            $hidden.val($input.val());
-        }
-
-        // Restore saved custom values after select options are settled
-        function restoreCustomIfNeeded() {
-            [$modelSelect, $fallbackSelect].forEach(function($sel) {
-                var isModel = $sel.is($modelSelect);
-                var $hidden = isModel ? $modelHidden : $fallbackHidden;
-                var val = $hidden.val();
-                if (val && $sel.val() !== val && $sel.find('option[value="' + val.replace(/"/g, '&quot;') + '"]').length === 0) {
-                    $sel.val('__custom__');
-                    showCustomInput($sel);
-                }
+        $.each(modelControls, function(_, control) {
+            control.provider.on('change', function() {
+                populateModelSelect(control);
             });
-        }
 
-        // Select change → sync hidden, show/hide custom
-        $modelSelect.on('change', function() { syncHiddenFromSelect($(this)); });
-        $fallbackSelect.on('change', function() { syncHiddenFromSelect($(this)); });
-
-        // Custom input change → sync to hidden
-        $modelCustom.on('input', function() { syncHiddenFromCustom($(this)); });
-        $fallbackCustom.on('input', function() { syncHiddenFromCustom($(this)); });
-
-        // Auto-fetch models on page load for saved chatbots
-        function fetchModels() {
-            var chatbotId = $('#post_ID').val();
-            if (!chatbotId || chatbotId <= 0) {
-                restoreCustomIfNeeded();
-                return;
-            }
-            if ($platformSelect.val() === 'anthropic') {
-                restoreCustomIfNeeded();
-                return;
-            }
-
-            $.post(ajaxurl, {
-                action: 'ai_chatbot_fetch_models',
-                chatbot_id: chatbotId,
-                platform: $platformSelect.val(),
-                api_base_url: $('#chatbot_api_base_url').val(),
-                api_key: $('#chatbot_api_key').val(),
-                _ajax_nonce: config.fetchModelsNonce
-            }, function(response) {
-                if (response.success && response.data.models) {
-                    populateModelSelects(response.data.models);
-                }
-            }).always(function() {
-                restoreCustomIfNeeded();
-            });
-        }
-        fetchModels();
-
-        // Re-fetch when platform changes
-        $platformSelect.on('change', function() {
-            fetchModels();
+            populateModelSelect(control);
         });
 
         // ===== Inactivity Timeout: Enable/Disable =====

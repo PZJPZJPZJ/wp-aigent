@@ -5,11 +5,19 @@ defined('ABSPATH') || exit;
  */
 
 $meta = AI_Chatbot_CPT_Chatbot::get_meta($post->ID);
+$providers = get_posts([
+    'post_type'      => 'ai_provider',
+    'post_status'    => 'publish',
+    'posts_per_page' => -1,
+    'orderby'        => 'title',
+    'order'          => 'ASC',
+    'no_found_rows'  => true,
+]);
 ?>
 
 <div class="ai-chatbot-meta-tabs">
     <nav class="ai-chatbot-tab-nav">
-        <button type="button" class="ai-chatbot-tab-btn active" data-tab="api"><?php esc_html_e('API Provider', 'wp-aigent'); ?></button>
+        <button type="button" class="ai-chatbot-tab-btn active" data-tab="api"><?php esc_html_e('AI Model', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="system"><?php esc_html_e('System Prompt', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="knowledge"><?php esc_html_e('Knowledge', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="memory"><?php esc_html_e('Memory', 'wp-aigent'); ?></button>
@@ -17,54 +25,56 @@ $meta = AI_Chatbot_CPT_Chatbot::get_meta($post->ID);
         <button type="button" class="ai-chatbot-tab-btn" data-tab="notify"><?php esc_html_e('Notifications', 'wp-aigent'); ?></button>
     </nav>
 
-    <!-- API Provider -->
+    <!-- AI Model -->
     <div class="ai-chatbot-tab-panel active" data-tab="api">
-        <div class="ai-chatbot-field">
-            <label for="chatbot_platform"><?php esc_html_e('Platform', 'wp-aigent'); ?></label>
-            <select id="chatbot_platform" name="chatbot_platform">
-                <option value="openai" <?php selected($meta['chatbot_platform'], 'openai'); ?>>OpenAI</option>
-                <option value="anthropic" <?php selected($meta['chatbot_platform'], 'anthropic'); ?>>Anthropic</option>
-            </select>
-            <div class="description"><?php esc_html_e('OpenAI-compatible and Anthropic-compatible APIs cover most providers (OpenRouter, DeepSeek, Azure, etc.). Select "OpenAI" for any API that uses the ChatGPT message format; set the API Base URL and Model below accordingly.', 'wp-aigent'); ?></div>
-        </div>
         <div class="ai-chatbot-field-row">
             <div class="ai-chatbot-field">
-                <label for="chatbot_api_base_url"><?php esc_html_e('API Base URL', 'wp-aigent'); ?></label>
-                <input type="url" id="chatbot_api_base_url" name="chatbot_api_base_url" value="<?php echo esc_attr($meta['chatbot_api_base_url']); ?>" />
-                <div class="description"><?php esc_html_e('e.g., https://api.openai.com/v1', 'wp-aigent'); ?></div>
+                <label for="chatbot_primary_provider_id"><?php esc_html_e('Primary AI Provider', 'wp-aigent'); ?></label>
+                <select id="chatbot_primary_provider_id" name="chatbot_primary_provider_id">
+                    <option value="0"><?php esc_html_e('— Select a provider —', 'wp-aigent'); ?></option>
+                    <?php foreach ($providers as $provider): ?>
+                        <?php $provider_meta = AI_Chatbot_CPT_Provider::get_meta($provider->ID); ?>
+                        <option value="<?php echo esc_attr($provider->ID); ?>" <?php selected((int) $meta['chatbot_primary_provider_id'], $provider->ID); ?>>
+                            <?php echo esc_html($provider->post_title . ' · ' . strtoupper($provider_meta['provider_platform'])); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (empty($providers)): ?>
+                    <div class="description ai-chatbot-provider-warning"><?php esc_html_e('Create and publish an AI Provider before this chatbot can send messages.', 'wp-aigent'); ?></div>
+                <?php else: ?>
+                    <div class="description"><?php esc_html_e('Configure providers first in AI Providers, then select one here.', 'wp-aigent'); ?></div>
+                <?php endif; ?>
             </div>
             <div class="ai-chatbot-field">
-                <label for="chatbot_api_key"><?php esc_html_e('API Key', 'wp-aigent'); ?></label>
-                <input type="text" id="chatbot_api_key" name="chatbot_api_key" value="" placeholder="<?php esc_attr_e('Leave blank to keep current key', 'wp-aigent'); ?>" />
-                <div class="description"><?php esc_html_e('Leave blank to keep current key. New value will be encrypted.', 'wp-aigent'); ?></div>
-            </div>
-        </div>
-        <div class="ai-chatbot-field-row">
-            <div class="ai-chatbot-field">
-                <label for="chatbot_model"><?php esc_html_e('Primary Model', 'wp-aigent'); ?></label>
+                <label for="chatbot_primary_model"><?php esc_html_e('Primary Model', 'wp-aigent'); ?></label>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <select id="chatbot_model" style="flex:1;min-width:120px;">
+                    <select id="chatbot_primary_model" name="chatbot_primary_model" style="flex:1;min-width:120px;" data-selected="<?php echo esc_attr($meta['chatbot_primary_model']); ?>">
                         <option value=""><?php esc_html_e('— Select model —', 'wp-aigent'); ?></option>
-                        <option value="__custom__"><?php esc_html_e('Custom...', 'wp-aigent'); ?></option>
                     </select>
                 </div>
-                <input type="hidden" id="chatbot_model_hidden" name="chatbot_model" value="<?php echo esc_attr($meta['chatbot_model']); ?>" />
-                <div id="chatbot-model-custom-wrap" style="margin-top:6px;display:none;">
-                    <input type="text" id="chatbot_model_custom" value="" placeholder="<?php esc_attr_e('Enter custom model name...', 'wp-aigent'); ?>" style="width:100%;" />
-                </div>
-                <div class="description"><?php esc_html_e('Available models are fetched automatically from the API. If fetching fails, use Custom... to enter the model name manually.', 'wp-aigent'); ?></div>
+                <div class="description"><?php esc_html_e('Select a model saved in the selected AI Provider.', 'wp-aigent'); ?></div>
+            </div>
+        </div>
+        <div class="ai-chatbot-field-row" style="margin-top:12px;">
+            <div class="ai-chatbot-field">
+                <label for="chatbot_fallback_provider_id"><?php esc_html_e('Fallback AI Provider', 'wp-aigent'); ?></label>
+                <select id="chatbot_fallback_provider_id" name="chatbot_fallback_provider_id">
+                    <option value="0"><?php esc_html_e('— None (disabled) —', 'wp-aigent'); ?></option>
+                    <?php foreach ($providers as $provider): ?>
+                        <?php $provider_meta = AI_Chatbot_CPT_Provider::get_meta($provider->ID); ?>
+                        <option value="<?php echo esc_attr($provider->ID); ?>" <?php selected((int) $meta['chatbot_fallback_provider_id'], $provider->ID); ?>>
+                            <?php echo esc_html($provider->post_title . ' · ' . strtoupper($provider_meta['provider_platform'])); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="description"><?php esc_html_e('Optional. This provider is used only if the primary request fails.', 'wp-aigent'); ?></div>
             </div>
             <div class="ai-chatbot-field">
                 <label for="chatbot_fallback_model"><?php esc_html_e('Fallback Model', 'wp-aigent'); ?></label>
-                <select id="chatbot_fallback_model" style="width:100%;">
+                <select id="chatbot_fallback_model" name="chatbot_fallback_model" style="width:100%;" data-selected="<?php echo esc_attr($meta['chatbot_fallback_model']); ?>">
                     <option value=""><?php esc_html_e('— None (disabled) —', 'wp-aigent'); ?></option>
-                    <option value="__custom__"><?php esc_html_e('Custom...', 'wp-aigent'); ?></option>
                 </select>
-                <input type="hidden" id="chatbot_fallback_model_hidden" name="chatbot_fallback_model" value="<?php echo esc_attr($meta['chatbot_fallback_model']); ?>" />
-                <div id="chatbot-fallback-model-custom-wrap" style="margin-top:6px;display:none;">
-                    <input type="text" id="chatbot_fallback_model_custom" value="" placeholder="<?php esc_attr_e('Enter custom model name...', 'wp-aigent'); ?>" style="width:100%;" />
-                </div>
-                <div class="description"><?php esc_html_e('Leave empty to disable fallback. When the primary model fails, the fallback is tried automatically.', 'wp-aigent'); ?></div>
+                <div class="description"><?php esc_html_e('Select a model from the fallback provider. Leave empty to disable fallback.', 'wp-aigent'); ?></div>
             </div>
         </div>
         <div class="ai-chatbot-field-row" style="margin-top:12px;">

@@ -20,6 +20,7 @@ class WP_AIGent_Plugin {
         $includes = WP_AIGENT_PATH . 'includes/';
 
         // CPTs
+        require_once $includes . 'ai-chatbot/class-cpt-provider.php';
         require_once $includes . 'ai-chatbot/class-cpt-chatbot.php';
         require_once $includes . 'ai-chatbot/class-cpt-knowledge.php';
         require_once $includes . 'ai-chatbot/class-cpt-conversation.php';
@@ -71,6 +72,7 @@ class WP_AIGent_Plugin {
         add_action('wp_ajax_ai_chatbot_preview', ['AI_Chatbot_Admin_Ajax', 'preview']);
         add_action('wp_ajax_ai_chatbot_trigger_notify', ['AI_Chatbot_Admin_Ajax', 'trigger_notify']);
         add_action('wp_ajax_ai_chatbot_fetch_models', ['AI_Chatbot_Admin_Ajax', 'fetch_models']);
+        add_action('wp_ajax_ai_provider_save_models', ['AI_Chatbot_Admin_Ajax', 'save_provider_models']);
 
         // WP Cron: inactivity notification check
         add_action('ai_chatbot_inactivity_notify', ['AI_Chatbot_Notifier', 'check_inactivity_and_notify']);
@@ -88,6 +90,7 @@ class WP_AIGent_Plugin {
     }
 
     public function register_cpts(): void {
+        AI_Chatbot_CPT_Provider::register();
         AI_Chatbot_CPT_Chatbot::register();
         AI_Chatbot_CPT_Knowledge::register();
         AI_Chatbot_CPT_Conversation::register();
@@ -103,34 +106,70 @@ class WP_AIGent_Plugin {
 
     public function enqueue_admin_assets(string $hook): void {
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->post_type, ['ai_chatbot', 'ai_knowledge', 'ai_conversation'], true)) {
+        if (!$screen || !in_array($screen->post_type, ['ai_provider', 'ai_chatbot', 'ai_knowledge', 'ai_conversation'], true)) {
             return;
         }
-        wp_enqueue_style('ai-chatbot-admin', WP_AIGENT_URL . 'assets/ai-chatbot/css/admin.css', [], WP_AIGENT_VERSION);
+        wp_enqueue_style(
+            'ai-chatbot-admin',
+            WP_AIGENT_URL . 'assets/ai-chatbot/css/admin.css',
+            [],
+            self::asset_version('assets/ai-chatbot/css/admin.css')
+        );
 
         // Always enqueue Dashicons for the icon selector
         wp_enqueue_style('dashicons');
 
-        // Load widget CSS/JS on chatbot edit screen for the live preview
+        // Load chatbot-specific configuration UI and live preview.
         if ($screen->post_type === 'ai_chatbot' && $screen->base === 'post') {
             // Admin JS for chatbot config (tabs, schema builder, notification rules)
             wp_enqueue_script(
                 'ai-chatbot-admin',
                 WP_AIGENT_URL . 'assets/ai-chatbot/js/admin.js',
                 ['jquery'],
-                WP_AIGENT_VERSION,
+                self::asset_version('assets/ai-chatbot/js/admin.js'),
                 true
             );
 
+            $provider_models = [];
+            $providers = get_posts([
+                'post_type'      => 'ai_provider',
+                'post_status'    => 'publish',
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            ]);
+            foreach ($providers as $provider_id) {
+                $provider_meta = AI_Chatbot_CPT_Provider::get_meta((int) $provider_id);
+                $provider_models[$provider_id] = is_array($provider_meta['provider_model_list'] ?? null)
+                    ? $provider_meta['provider_model_list']
+                    : [];
+            }
+
             wp_localize_script('ai-chatbot-admin', 'aiChatbotAdmin', [
                 'preview_nonce' => wp_create_nonce('ai_chatbot_preview'),
+                'providerModels'   => $provider_models,
+            ]);
+        } elseif ($screen->post_type === 'ai_provider' && $screen->base === 'post') {
+            wp_enqueue_script(
+                'ai-provider-admin',
+                WP_AIGENT_URL . 'assets/ai-chatbot/js/provider-admin.js',
+                ['jquery'],
+                self::asset_version('assets/ai-chatbot/js/provider-admin.js'),
+                true
+            );
+            wp_localize_script('ai-provider-admin', 'aiProviderAdmin', [
+                'providerId'       => (int) get_the_ID(),
                 'fetchModelsNonce' => wp_create_nonce('ai_chatbot_fetch_models'),
-                'modelList'        => get_post_meta(get_the_ID(), 'chatbot_model_list', true) ?: [],
+                'manageModelsNonce' => wp_create_nonce('ai_provider_manage_models'),
                 'i18n' => [
-                    'anthropicManual' => __('Anthropic only supports manual entry.', 'wp-aigent'),
                     'fetchModels' => __('Fetch Models', 'wp-aigent'),
-                    'fetching' => __('Fetching...', 'wp-aigent'),
-                    'modelsFound' => __('Found %d models', 'wp-aigent'),
+                    'fetching'    => __('Fetching…', 'wp-aigent'),
+                    'fetchFailed' => __('Could not fetch models. Check the saved API URL and key.', 'wp-aigent'),
+                    'modelsFound' => __('Found %d models.', 'wp-aigent'),
+                    'editModels'  => __('Edit Models', 'wp-aigent'),
+                    'done'        => __('Done', 'wp-aigent'),
+                    'deleteModel' => __('Delete model', 'wp-aigent'),
+                    'saveFailed'  => __('Could not save the model list.', 'wp-aigent'),
                 ],
             ]);
         }

@@ -11,6 +11,7 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 ## Features
 
 ### 🤖 Multi-Platform AI Engine
+- **Reusable AI Providers** — create multiple encrypted provider connections once and share them across AI features
 - **OpenAI** — GPT-4o, GPT-4, GPT-3.5-turbo, and any OpenAI-compatible API
 - **Anthropic** — Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
 - **Any compatible provider** — OpenRouter, DeepSeek, Azure OpenAI, and custom endpoints
@@ -170,15 +171,25 @@ In the **System Prompt** tab:
 | Cache TTL | How long to remember closed state | 1440 min (24h) |
 | Popup Transition | Fade-in/out duration (0–1000ms) | 100ms |
 
-### API Provider
+### AI Providers
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| Platform | `openai` (compatible) or `anthropic` | `openai` |
+| Provider Type | `openai` (compatible) or `anthropic` | `openai` |
 | API Base URL | API endpoint | `https://api.openai.com/v1` |
 | API Key | Encrypted with AES-256-CBC | — |
+| Model List | Fetched once per reusable provider | — |
+
+Each chatbot configures an independent primary Provider/model pair and an optional fallback Provider/model pair.
+
+### Chatbot AI Model
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Primary AI Provider | Provider connection for the primary request | — |
 | Primary Model | Model for chat completions | — |
-| Fallback Model | Secondary model on primary failure | *(disabled)* |
+| Fallback AI Provider | Provider connection used after a primary failure | *(disabled)* |
+| Fallback Model | Model used with the fallback provider | *(disabled)* |
 | Input Tokens | Max context window (reference only) | 128000 |
 | Output Tokens | Max response tokens | 4096 |
 | Temperature | Response randomness (0–2) | 0.2 *(disabled by default)* |

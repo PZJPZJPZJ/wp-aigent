@@ -13,9 +13,11 @@ class WP_AIGent_Installer {
     }
 
     private static function register_cpts(): void {
+        require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-provider.php';
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-chatbot.php';
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-knowledge.php';
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-conversation.php';
+        AI_Chatbot_CPT_Provider::register();
         AI_Chatbot_CPT_Chatbot::register();
         AI_Chatbot_CPT_Knowledge::register();
         AI_Chatbot_CPT_Conversation::register();

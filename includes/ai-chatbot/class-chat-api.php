@@ -111,8 +111,31 @@ class AI_Chatbot_Chat_API {
             $effort = $config['chatbot_reasoning_effort'] ?? 'medium';
         }
 
+        // Resolve primary and fallback providers independently. Chatbots never
+        // store credentials, platform, or endpoint details in their own meta.
+        $primary_provider_id = (int) ($config['chatbot_primary_provider_id'] ?? 0);
+        $primary_provider_config = AI_Chatbot_CPT_Provider::get_connection_config($primary_provider_id);
+        if (empty($primary_provider_config) || empty($config['chatbot_primary_model'])) {
+            return self::error('primary_provider_not_configured', 'This chatbot needs a valid primary AI Provider and model.', 503);
+        }
+
+        $primary_ai_config = array_merge($config, $primary_provider_config, [
+            'chatbot_model' => $config['chatbot_primary_model'],
+        ]);
+
+        $fallback_ai_config = [];
+        $fallback_provider_id = (int) ($config['chatbot_fallback_provider_id'] ?? 0);
+        if ($fallback_provider_id && !empty($config['chatbot_fallback_model'])) {
+            $fallback_provider_config = AI_Chatbot_CPT_Provider::get_connection_config($fallback_provider_id);
+            if (!empty($fallback_provider_config)) {
+                $fallback_ai_config = array_merge($config, $fallback_provider_config, [
+                    'chatbot_model' => $config['chatbot_fallback_model'],
+                ]);
+            }
+        }
+
         // Call AI
-        $ai_client = new AI_Chatbot_AI_Client($config);
+        $ai_client = new AI_Chatbot_AI_Client($primary_ai_config, $fallback_ai_config);
         $result = $ai_client->chat($messages);
 
         if (isset($result['error'])) {
@@ -122,7 +145,7 @@ class AI_Chatbot_Chat_API {
                 $message,
                 '',
                 [],
-                $result['model'] ?? $config['chatbot_model'] ?? '',
+                $result['model'] ?? $config['chatbot_primary_model'] ?? '',
                 $result['error'],
                 $effort
             );
@@ -155,7 +178,7 @@ class AI_Chatbot_Chat_API {
         $lead_data = $parsed['lead'] ?? [];
 
         // Save to memory
-        $memory->append($conversation_id, $message, $reply, $normalized_usage, $result['model'] ?? $config['chatbot_model'] ?? '', '', $effort);
+        $memory->append($conversation_id, $message, $reply, $normalized_usage, $result['model'] ?? $config['chatbot_primary_model'] ?? '', '', $effort);
 
         // Record last activity timestamp for inactivity timeout detection
         update_post_meta($conversation_id, 'conversation_last_activity', time());

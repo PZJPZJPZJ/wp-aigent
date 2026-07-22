@@ -14,7 +14,7 @@ class AI_Chatbot_Admin_Columns {
     }
 
     public function chatbot_columns(array $columns): array {
-        $columns['platform'] = __('Platform', 'wp-aigent');
+        $columns['platform'] = __('AI Provider', 'wp-aigent');
         $columns['model']    = __('Model', 'wp-aigent');
         return $columns;
     }
@@ -23,10 +23,14 @@ class AI_Chatbot_Admin_Columns {
         $config = AI_Chatbot_CPT_Chatbot::get_meta($post_id);
         switch ($column) {
             case 'platform':
-                echo esc_html($config['chatbot_platform'] ?? '—');
+                $provider_id = (int) ($config['chatbot_primary_provider_id'] ?? 0);
+                $provider = $provider_id ? get_post($provider_id) : null;
+                echo $provider
+                    ? esc_html($provider->post_title)
+                    : '<span style="color:#d63638;">' . esc_html__('Not configured', 'wp-aigent') . '</span>';
                 break;
             case 'model':
-                echo esc_html($config['chatbot_model'] ?? '—');
+                echo esc_html($config['chatbot_primary_model'] ?? '—');
                 break;
         }
     }

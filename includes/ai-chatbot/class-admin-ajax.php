@@ -57,39 +57,61 @@ class AI_Chatbot_Admin_Ajax {
             wp_send_json_error(['message' => 'Security check failed.']);
         }
 
-        $chatbot_id = (int) ($_POST['chatbot_id'] ?? 0);
-        $platform = sanitize_text_field($_POST['platform'] ?? 'openai');
-        $base_url = sanitize_text_field($_POST['api_base_url'] ?? '');
-        $api_key = sanitize_text_field($_POST['api_key'] ?? '');
-
-        // Load stored config if chatbot_id provided (decrypts key server-side)
-        if ($chatbot_id && get_post_type($chatbot_id) === 'ai_chatbot') {
-            $config = AI_Chatbot_CPT_Chatbot::get_meta($chatbot_id);
-            $platform = $config['chatbot_platform'] ?? $platform;
-            $base_url = $config['chatbot_api_base_url'] ?? $base_url;
-            $api_key = $config['chatbot_api_key'] ?? $api_key;
+        $provider_id = (int) ($_POST['provider_id'] ?? 0);
+        if (!$provider_id || get_post_type($provider_id) !== 'ai_provider') {
+            wp_send_json_error(['message' => 'Save a valid AI Provider before fetching models.']);
         }
 
-        if (empty($base_url) || empty($api_key)) {
-            wp_send_json_error(['message' => 'API Base URL and API Key are required.']);
+        $config = AI_Chatbot_CPT_Provider::get_connection_config($provider_id, false);
+        if (empty($config)) {
+            wp_send_json_error(['message' => 'This provider needs a published status, API Base URL, and API Key.']);
         }
 
-        $client = new AI_Chatbot_AI_Client([
-            'chatbot_platform'     => $platform,
-            'chatbot_api_base_url' => $base_url,
-            'chatbot_api_key'      => $api_key,
-        ]);
+        $client = new AI_Chatbot_AI_Client($config);
 
         $models = $client->list_models();
 
         if (!empty($models)) {
-            if ($chatbot_id) {
-                update_post_meta($chatbot_id, 'chatbot_model_list', $models);
-            }
+            $models = array_slice(array_values(array_unique(array_filter(array_map(
+                'sanitize_text_field',
+                $models
+            )))), 0, 500);
+            update_post_meta($provider_id, 'provider_model_list', $models);
             wp_send_json_success(['models' => $models]);
         } else {
             wp_send_json_error(['message' => 'No models found or API unreachable.']);
         }
+    }
+
+    /**
+     * AJAX handler for manually maintaining a provider's model list.
+     */
+    public static function save_provider_models(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die(-1);
+        }
+
+        if (!check_ajax_referer('ai_provider_manage_models', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Security check failed.']);
+        }
+
+        $provider_id = (int) ($_POST['provider_id'] ?? 0);
+        if (!$provider_id || get_post_type($provider_id) !== 'ai_provider' || !current_user_can('edit_post', $provider_id)) {
+            wp_send_json_error(['message' => 'Invalid AI Provider.']);
+        }
+
+        $raw_models = isset($_POST['models']) && is_array($_POST['models']) ? $_POST['models'] : [];
+        $models = [];
+        foreach ($raw_models as $model) {
+            $model = sanitize_text_field(wp_unslash($model));
+            if ($model !== '') {
+                $models[] = $model;
+            }
+        }
+
+        $models = array_slice(array_values(array_unique($models)), 0, 500);
+        update_post_meta($provider_id, 'provider_model_list', $models);
+        wp_send_json_success(['models' => $models]);
     }
 
     /**

@@ -4,48 +4,32 @@ defined('ABSPATH') || exit;
 class AI_Chatbot_AI_Client {
 
     private array $config;
+    private array $fallback_config;
 
-    public function __construct(array $config) {
+    public function __construct(array $config, array $fallback_config = []) {
         $this->config = $config;
+        $this->fallback_config = $fallback_config;
     }
 
     /**
      * Send a chat completion request to the configured platform.
-     * On failure, retries with fallback model if configured.
+     * On failure, retries through an independently configured fallback provider.
      *
      * @return array ['content' => '...', 'raw' => [...]] on success,
      *               ['error' => 'message', 'error_code' => 'code'] on failure.
      */
     public function chat(array $messages): array {
-        $platform = $this->config['chatbot_platform'] ?? 'openai';
         $used_model = $this->config['chatbot_model'] ?? '';
 
-        // Primary attempt
-        $result = $platform === 'anthropic'
-            ? $this->chat_anthropic($messages)
-            : $this->chat_openai($messages);
+        $result = $this->send_chat($messages, $this->config);
 
-        // Fallback retry if primary failed and fallback is configured
-        if (isset($result['error'])) {
-            $fallback_model = trim($this->config['chatbot_fallback_model'] ?? '');
+        if (isset($result['error']) && !empty($this->fallback_config['chatbot_model'])) {
+            $primary_error = $result['error'];
+            $used_model = $this->fallback_config['chatbot_model'];
+            $result = $this->send_chat($messages, $this->fallback_config);
 
-            if ($fallback_model !== ''
-                && $fallback_model !== $this->config['chatbot_model']
-            ) {
-                $original_model = $this->config['chatbot_model'];
-                $primary_error = $result['error'];
-                $used_model = $fallback_model;
-                $this->config['chatbot_model'] = $fallback_model;
-
-                $result = $platform === 'anthropic'
-                    ? $this->chat_anthropic($messages)
-                    : $this->chat_openai($messages);
-
-                if (isset($result['error'])) {
-                    $result['error'] = "{$primary_error} | fallback {$fallback_model} also failed: {$result['error']}";
-                }
-
-                $this->config['chatbot_model'] = $original_model;
+            if (isset($result['error'])) {
+                $result['error'] = "{$primary_error} | fallback {$used_model} also failed: {$result['error']}";
             }
         }
 
@@ -55,32 +39,38 @@ class AI_Chatbot_AI_Client {
         return $result;
     }
 
+    private function send_chat(array $messages, array $config): array {
+        return ($config['chatbot_platform'] ?? 'openai') === 'anthropic'
+            ? $this->chat_anthropic($messages, $config)
+            : $this->chat_openai($messages, $config);
+    }
+
     /**
      * OpenAI-compatible API (OpenAI, OpenRouter, DeepSeek, Custom).
      */
-    private function chat_openai(array $messages): array {
-        $model = !empty($this->config['chatbot_model']) ? $this->config['chatbot_model'] : '';
+    private function chat_openai(array $messages, array $config): array {
+        $model = !empty($config['chatbot_model']) ? $config['chatbot_model'] : '';
 
         $body = [
             'model'      => $model,
             'messages'   => $messages,
-            'max_tokens' => (int) ($this->config['chatbot_max_tokens'] ?? 2000),
+            'max_tokens' => (int) ($config['chatbot_max_tokens'] ?? 2000),
         ];
 
         // Optional: Temperature
-        if (!empty($this->config['chatbot_temperature_enabled'])
-            && $this->config['chatbot_temperature_enabled'] === '1') {
-            $body['temperature'] = (float) ($this->config['chatbot_temperature'] ?? 0.2);
+        if (!empty($config['chatbot_temperature_enabled'])
+            && $config['chatbot_temperature_enabled'] === '1') {
+            $body['temperature'] = (float) ($config['chatbot_temperature'] ?? 0.2);
         }
 
         // Optional: Reasoning Effort (OpenAI-compatible: o-series, DeepSeek, etc.)
-        if (!empty($this->config['chatbot_thinking_enabled'])
-            && $this->config['chatbot_thinking_enabled'] === '1') {
-            $body['reasoning_effort'] = $this->config['chatbot_reasoning_effort'] ?? 'medium';
+        if (!empty($config['chatbot_thinking_enabled'])
+            && $config['chatbot_thinking_enabled'] === '1') {
+            $body['reasoning_effort'] = $config['chatbot_reasoning_effort'] ?? 'medium';
         }
 
-        $api_url = rtrim($this->config['chatbot_api_base_url'] ?? 'https://api.openai.com/v1', '/');
-        $api_key = $this->config['chatbot_api_key'] ?? '';
+        $api_url = rtrim($config['chatbot_api_base_url'] ?? 'https://api.openai.com/v1', '/');
+        $api_key = $config['chatbot_api_key'] ?? '';
 
         $response = wp_remote_post($api_url . '/chat/completions', [
             'headers' => [
@@ -127,9 +117,9 @@ class AI_Chatbot_AI_Client {
     /**
      * Anthropic API format.
      */
-    private function chat_anthropic(array $messages): array {
-        $api_url = rtrim($this->config['chatbot_api_base_url'] ?? 'https://api.anthropic.com/v1', '/');
-        $api_key = $this->config['chatbot_api_key'] ?? '';
+    private function chat_anthropic(array $messages, array $config): array {
+        $api_url = rtrim($config['chatbot_api_base_url'] ?? 'https://api.anthropic.com/v1', '/');
+        $api_key = $config['chatbot_api_key'] ?? '';
 
         // Extract system message (Anthropic uses top-level "system" field)
         $system = '';
@@ -143,23 +133,23 @@ class AI_Chatbot_AI_Client {
         }
 
         $body = [
-            'model'      => !empty($this->config['chatbot_model']) ? $this->config['chatbot_model'] : '',
+            'model'      => !empty($config['chatbot_model']) ? $config['chatbot_model'] : '',
             'messages'   => $clean_messages,
-            'max_tokens' => (int) ($this->config['chatbot_max_tokens'] ?? 2000),
+            'max_tokens' => (int) ($config['chatbot_max_tokens'] ?? 2000),
         ];
 
         // Optional: Temperature (not compatible with thinking — removed if thinking is enabled)
-        if (!empty($this->config['chatbot_temperature_enabled'])
-            && $this->config['chatbot_temperature_enabled'] === '1') {
-            $body['temperature'] = (float) ($this->config['chatbot_temperature'] ?? 0.2);
+        if (!empty($config['chatbot_temperature_enabled'])
+            && $config['chatbot_temperature_enabled'] === '1') {
+            $body['temperature'] = (float) ($config['chatbot_temperature'] ?? 0.2);
         }
 
         // Optional: Extended Thinking + Reasoning Effort
-        if (!empty($this->config['chatbot_thinking_enabled'])
-            && $this->config['chatbot_thinking_enabled'] === '1') {
+        if (!empty($config['chatbot_thinking_enabled'])
+            && $config['chatbot_thinking_enabled'] === '1') {
             $body['thinking'] = ['type' => 'adaptive'];
 
-            $effort = $this->config['chatbot_reasoning_effort'] ?? '';
+            $effort = $config['chatbot_reasoning_effort'] ?? '';
             if (!empty($effort)) {
                 $body['output_config'] = ['effort' => $effort];
             }

@@ -60,10 +60,9 @@ class AI_Chatbot_CPT_Chatbot {
         if (!current_user_can('edit_post', $post_id)) return;
 
         $fields = [
-            'chatbot_platform',
-            'chatbot_api_base_url',
-            'chatbot_api_key',
-            'chatbot_model',
+            'chatbot_primary_provider_id',
+            'chatbot_primary_model',
+            'chatbot_fallback_provider_id',
             'chatbot_fallback_model',
             'chatbot_temperature',
             'chatbot_temperature_enabled',
@@ -90,16 +89,6 @@ class AI_Chatbot_CPT_Chatbot {
         ];
 
         foreach ($fields as $field) {
-            if ($field === 'chatbot_api_key') {
-                // Empty = keep old value; non-empty = encrypt and save
-                if (!isset($_POST['chatbot_api_key']) || '' === $_POST['chatbot_api_key']) {
-                    continue;
-                }
-                $value = sanitize_text_field($_POST['chatbot_api_key']);
-                update_post_meta($post_id, $field, self::encrypt($value));
-                continue;
-            }
-
             if (isset($_POST[$field])) {
                 $value = $_POST[$field];
 
@@ -153,6 +142,8 @@ class AI_Chatbot_CPT_Chatbot {
                         $clean[] = $item;
                     }
                     $value = $clean;
+                } elseif (in_array($field, ['chatbot_primary_provider_id', 'chatbot_fallback_provider_id'], true)) {
+                    $value = absint($value);
                 } elseif ($field === 'chatbot_knowledge_ids' && is_array($value)) {
                     $value = array_map('intval', $value);
                 } elseif ($field === 'chatbot_lead_fields' && is_array($value)) {
@@ -199,12 +190,10 @@ class AI_Chatbot_CPT_Chatbot {
 
     public static function get_defaults(): array {
         return [
-            'chatbot_platform'           => 'openai',
-            'chatbot_api_base_url'       => 'https://api.openai.com/v1',
-            'chatbot_api_key'          => '',
-            'chatbot_model'            => '',
-            'chatbot_fallback_model'   => '',
-            'chatbot_model_list'       => [],
+            'chatbot_primary_provider_id'  => 0,
+            'chatbot_primary_model'        => '',
+            'chatbot_fallback_provider_id' => 0,
+            'chatbot_fallback_model'       => '',
             'chatbot_temperature'           => '0.2',
             'chatbot_temperature_enabled'  => '0',
             'chatbot_max_tokens'            => '4096',
@@ -249,11 +238,6 @@ class AI_Chatbot_CPT_Chatbot {
             $meta[$key] = $value !== '' ? $value : $default;
         }
 
-        // Decrypt API key
-        if (!empty($meta['chatbot_api_key'])) {
-            $meta['chatbot_api_key'] = self::decrypt($meta['chatbot_api_key']);
-        }
-
         // Backward compat: migrate flat rules to grouped format
         foreach (['chatbot_lead_capture_rules', 'chatbot_notify_rules'] as $rules_key) {
             if (!empty($meta[$rules_key]) && is_array($meta[$rules_key]) && isset($meta[$rules_key][0]['field'])) {
@@ -262,40 +246,6 @@ class AI_Chatbot_CPT_Chatbot {
         }
 
         return $meta;
-    }
-
-    private static function encrypt(string $value): string {
-        if (!function_exists('openssl_encrypt')) return $value;
-        $key = defined('AI_CHAT_ENCRYPT_KEY') ? AI_CHAT_ENCRYPT_KEY : wp_salt('secure_auth');
-        $cipher = 'aes-256-cbc';
-        $iv_len = openssl_cipher_iv_length($cipher);
-        $iv = openssl_random_pseudo_bytes($iv_len);
-        $encrypted = openssl_encrypt($value, $cipher, $key, 0, $iv);
-        return base64_encode($iv . $encrypted);
-    }
-
-    private static function decrypt(string $value): string {
-        if (!function_exists('openssl_decrypt')) return $value;
-        $cipher = 'aes-256-cbc';
-        $iv_len = openssl_cipher_iv_length($cipher);
-        $data = base64_decode($value);
-        if ($data === false || strlen($data) <= $iv_len) return $value;
-        $iv = substr($data, 0, $iv_len);
-        $encrypted = substr($data, $iv_len);
-
-        // Try current encrypt key first
-        $key = defined('AI_CHAT_ENCRYPT_KEY') ? AI_CHAT_ENCRYPT_KEY : wp_salt('secure_auth');
-        $result = openssl_decrypt($encrypted, $cipher, $key, 0, $iv);
-        if ($result !== false) return $result;
-
-        // Fallback: try legacy session secret for backward compatibility
-        $legacy = defined('AI_CHAT_SESSION_SECRET') ? AI_CHAT_SESSION_SECRET : wp_salt('auth');
-        if ($legacy !== $key) {
-            $result = openssl_decrypt($encrypted, $cipher, $legacy, 0, $iv);
-            if ($result !== false) return $result;
-        }
-
-        return $value;
     }
 
     private static function default_system_prompt(): string {
