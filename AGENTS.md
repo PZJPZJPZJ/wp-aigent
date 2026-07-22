@@ -50,8 +50,7 @@ assets/
 │   └── js/provider-admin.js            # AI Provider 后台 UI
 ├── ai-form/
 │   ├── css/ai-form-admin.css           # AI 表单后台样式
-│   ├── js/country-code.js              # 基于 Cloudflare 的访客国家识别
-│   └── js/elementor-form-tracking.js   # 表单成功提交时推送 dataLayer
+│   └── js/country-code.js              # 基于 Cloudflare 的访客国家识别
 templates/
 └── ai-chatbot/
     ├── admin-provider-meta-box.php     # AI Provider 连接配置 UI
