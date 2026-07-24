@@ -64,7 +64,7 @@ class AI_Chatbot_Admin_Ajax {
 
         $config = AI_Chatbot_CPT_Provider::get_connection_config($provider_id, false);
         if (empty($config)) {
-            wp_send_json_error(['message' => 'This provider needs a published status, API Base URL, and API Key.']);
+            wp_send_json_error(['message' => 'This provider needs an API Base URL and API Key.']);
         }
 
         $client = new AI_Chatbot_AI_Client($config);
@@ -76,7 +76,7 @@ class AI_Chatbot_Admin_Ajax {
                 'sanitize_text_field',
                 $models
             )))), 0, 500);
-            update_post_meta($provider_id, 'provider_model_list', $models);
+            update_post_meta($provider_id, 'api_provider_model_list', $models);
             wp_send_json_success(['models' => $models]);
         } else {
             wp_send_json_error(['message' => 'No models found or API unreachable.']);
@@ -110,7 +110,7 @@ class AI_Chatbot_Admin_Ajax {
         }
 
         $models = array_slice(array_values(array_unique($models)), 0, 500);
-        update_post_meta($provider_id, 'provider_model_list', $models);
+        update_post_meta($provider_id, 'api_provider_model_list', $models);
         wp_send_json_success(['models' => $models]);
     }
 

@@ -13,11 +13,19 @@ $providers = get_posts([
     'order'          => 'ASC',
     'no_found_rows'  => true,
 ]);
+$provider_meta_by_id = [];
+$provider_models_by_id = [];
+foreach ($providers as $provider) {
+    $provider_meta_by_id[$provider->ID] = AI_Chatbot_CPT_Provider::get_meta($provider->ID);
+    $provider_models_by_id[$provider->ID] = is_array($provider_meta_by_id[$provider->ID]['api_provider_model_list'] ?? null)
+        ? $provider_meta_by_id[$provider->ID]['api_provider_model_list']
+        : [];
+}
 ?>
 
 <div class="ai-chatbot-meta-tabs">
     <nav class="ai-chatbot-tab-nav">
-        <button type="button" class="ai-chatbot-tab-btn active" data-tab="api"><?php esc_html_e('AI Model', 'wp-aigent'); ?></button>
+        <button type="button" class="ai-chatbot-tab-btn active" data-tab="api"><?php esc_html_e('API Provider', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="system"><?php esc_html_e('System Prompt', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="knowledge"><?php esc_html_e('Knowledge', 'wp-aigent'); ?></button>
         <button type="button" class="ai-chatbot-tab-btn" data-tab="memory"><?php esc_html_e('Memory', 'wp-aigent'); ?></button>
@@ -25,108 +33,80 @@ $providers = get_posts([
         <button type="button" class="ai-chatbot-tab-btn" data-tab="notify"><?php esc_html_e('Notifications', 'wp-aigent'); ?></button>
     </nav>
 
-    <!-- AI Model -->
+    <!-- API Provider -->
     <div class="ai-chatbot-tab-panel active" data-tab="api">
-        <div class="ai-chatbot-field-row">
-            <div class="ai-chatbot-field">
-                <label for="chatbot_primary_provider_id"><?php esc_html_e('Primary AI Provider', 'wp-aigent'); ?></label>
-                <select id="chatbot_primary_provider_id" name="chatbot_primary_provider_id">
-                    <option value="0"><?php esc_html_e('— Select a provider —', 'wp-aigent'); ?></option>
-                    <?php foreach ($providers as $provider): ?>
-                        <?php $provider_meta = AI_Chatbot_CPT_Provider::get_meta($provider->ID); ?>
-                        <option value="<?php echo esc_attr($provider->ID); ?>" <?php selected((int) $meta['chatbot_primary_provider_id'], $provider->ID); ?>>
-                            <?php echo esc_html($provider->post_title . ' · ' . strtoupper($provider_meta['provider_platform'])); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (empty($providers)): ?>
-                    <div class="description ai-chatbot-provider-warning"><?php esc_html_e('Create and publish an AI Provider before this chatbot can send messages.', 'wp-aigent'); ?></div>
-                <?php else: ?>
-                    <div class="description"><?php esc_html_e('Configure providers first in AI Providers, then select one here.', 'wp-aigent'); ?></div>
-                <?php endif; ?>
-            </div>
-            <div class="ai-chatbot-field">
-                <label for="chatbot_primary_model"><?php esc_html_e('Primary Model', 'wp-aigent'); ?></label>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <select id="chatbot_primary_model" name="chatbot_primary_model" style="flex:1;min-width:120px;" data-selected="<?php echo esc_attr($meta['chatbot_primary_model']); ?>">
-                        <option value=""><?php esc_html_e('— Select model —', 'wp-aigent'); ?></option>
-                    </select>
-                </div>
-                <div class="description"><?php esc_html_e('Select a model saved in the selected AI Provider.', 'wp-aigent'); ?></div>
-            </div>
+        <div class="ai-chatbot-provider-config-grid">
+            <?php
+            $cards = [
+                'primary' => [
+                    'title' => __('Primary', 'wp-aigent'),
+                    'provider_id' => 'chatbot_primary_api_provider_id',
+                    'model' => 'chatbot_primary_api_model',
+                    'effort' => 'chatbot_primary_reasoning_effort',
+                    'output_tokens' => 'chatbot_primary_output_tokens',
+                    'empty' => __('— Select a provider —', 'wp-aigent'),
+                    'description' => __('Used for every request.', 'wp-aigent'),
+                ],
+                'fallback' => [
+                    'title' => __('Fallback', 'wp-aigent'),
+                    'provider_id' => 'chatbot_fallback_api_provider_id',
+                    'model' => 'chatbot_fallback_api_model',
+                    'effort' => 'chatbot_fallback_reasoning_effort',
+                    'output_tokens' => 'chatbot_fallback_output_tokens',
+                    'empty' => __('— None (disabled) —', 'wp-aigent'),
+                    'description' => __('Used only when the primary request fails.', 'wp-aigent'),
+                ],
+            ];
+            foreach ($cards as $card):
+                $selected_provider_id = (int) $meta[$card['provider_id']];
+                $selected_model = (string) $meta[$card['model']];
+                $models = $provider_models_by_id[$selected_provider_id] ?? [];
+            ?>
+                <section class="ai-chatbot-provider-config-card">
+                    <h3><?php echo esc_html($card['title']); ?></h3>
+                    <p><?php echo esc_html($card['description']); ?></p>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['provider_id']); ?>"><?php esc_html_e('API Provider', 'wp-aigent'); ?></label>
+                        <select id="<?php echo esc_attr($card['provider_id']); ?>" name="<?php echo esc_attr($card['provider_id']); ?>">
+                            <option value="0"><?php echo esc_html($card['empty']); ?></option>
+                            <?php foreach ($providers as $provider): ?>
+                                <option value="<?php echo esc_attr($provider->ID); ?>" <?php selected((int) $meta[$card['provider_id']], $provider->ID); ?>>
+                                    <?php echo esc_html($provider->post_title . ' · ' . strtoupper(str_replace('_', ' ', $provider_meta_by_id[$provider->ID]['api_provider_protocol']))); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="description"><?php esc_html_e('Select the saved connection and protocol used by this request path.', 'wp-aigent'); ?></div>
+                    </div>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['model']); ?>"><?php esc_html_e('Model', 'wp-aigent'); ?></label>
+                        <select id="<?php echo esc_attr($card['model']); ?>" name="<?php echo esc_attr($card['model']); ?>">
+                            <option value=""><?php esc_html_e('— Select model —', 'wp-aigent'); ?></option>
+                            <?php foreach ($models as $model): ?>
+                                <option value="<?php echo esc_attr($model); ?>" <?php selected($selected_model, $model); ?>><?php echo esc_html($model); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="description"><?php esc_html_e('Models are loaded from the selected API Provider.', 'wp-aigent'); ?></div>
+                    </div>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['effort']); ?>"><?php esc_html_e('Thinking / Reasoning Effort', 'wp-aigent'); ?></label>
+                        <select id="<?php echo esc_attr($card['effort']); ?>" name="<?php echo esc_attr($card['effort']); ?>">
+                            <?php foreach (['off', 'low', 'medium', 'high', 'xhigh'] as $effort): ?>
+                                <option value="<?php echo esc_attr($effort); ?>" <?php selected($meta[$card['effort']], $effort); ?>><?php echo esc_html(ucfirst($effort)); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="description"><?php esc_html_e('Off disables Thinking for this configuration.', 'wp-aigent'); ?></div>
+                    </div>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['output_tokens']); ?>"><?php esc_html_e('Output Tokens', 'wp-aigent'); ?></label>
+                        <input type="number" id="<?php echo esc_attr($card['output_tokens']); ?>" name="<?php echo esc_attr($card['output_tokens']); ?>" value="<?php echo esc_attr($meta[$card['output_tokens']]); ?>" min="1" max="128000" step="1" />
+                        <div class="description"><?php esc_html_e('Maximum tokens for the generated reply. Default: 4096.', 'wp-aigent'); ?></div>
+                    </div>
+                </section>
+            <?php endforeach; ?>
         </div>
-        <div class="ai-chatbot-field-row" style="margin-top:12px;">
-            <div class="ai-chatbot-field">
-                <label for="chatbot_fallback_provider_id"><?php esc_html_e('Fallback AI Provider', 'wp-aigent'); ?></label>
-                <select id="chatbot_fallback_provider_id" name="chatbot_fallback_provider_id">
-                    <option value="0"><?php esc_html_e('— None (disabled) —', 'wp-aigent'); ?></option>
-                    <?php foreach ($providers as $provider): ?>
-                        <?php $provider_meta = AI_Chatbot_CPT_Provider::get_meta($provider->ID); ?>
-                        <option value="<?php echo esc_attr($provider->ID); ?>" <?php selected((int) $meta['chatbot_fallback_provider_id'], $provider->ID); ?>>
-                            <?php echo esc_html($provider->post_title . ' · ' . strtoupper($provider_meta['provider_platform'])); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="description"><?php esc_html_e('Optional. This provider is used only if the primary request fails.', 'wp-aigent'); ?></div>
-            </div>
-            <div class="ai-chatbot-field">
-                <label for="chatbot_fallback_model"><?php esc_html_e('Fallback Model', 'wp-aigent'); ?></label>
-                <select id="chatbot_fallback_model" name="chatbot_fallback_model" style="width:100%;" data-selected="<?php echo esc_attr($meta['chatbot_fallback_model']); ?>">
-                    <option value=""><?php esc_html_e('— None (disabled) —', 'wp-aigent'); ?></option>
-                </select>
-                <div class="description"><?php esc_html_e('Select a model from the fallback provider. Leave empty to disable fallback.', 'wp-aigent'); ?></div>
-            </div>
-        </div>
-        <div class="ai-chatbot-field-row" style="margin-top:12px;">
-            <div class="ai-chatbot-field">
-                <label for="chatbot_input_tokens"><?php esc_html_e('Input Tokens', 'wp-aigent'); ?></label>
-                <input type="number" id="chatbot_input_tokens" name="chatbot_input_tokens" value="<?php echo esc_attr($meta['chatbot_input_tokens']); ?>" min="1" max="1000000" />
-                <div class="description"><?php esc_html_e('Maximum input (context) window for reference. Not sent to the API.', 'wp-aigent'); ?></div>
-            </div>
-            <div class="ai-chatbot-field">
-                <label for="chatbot_max_tokens"><?php esc_html_e('Output Tokens', 'wp-aigent'); ?></label>
-                <input type="number" id="chatbot_max_tokens" name="chatbot_max_tokens" value="<?php echo esc_attr($meta['chatbot_max_tokens']); ?>" min="1" max="128000" />
-                <div class="description"><?php esc_html_e('Maximum output tokens for the response. 1 token ≈ 0.75 words.', 'wp-aigent'); ?></div>
-            </div>
-        </div>
-
-        <h4 style="margin:16px 0 8px;">Optional Parameters</h4>
-
-        <!-- Temperature -->
-        <div class="ai-chatbot-optional-row" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
-                    <input type="checkbox" name="chatbot_temperature_enabled" value="1" <?php checked($meta['chatbot_temperature_enabled'], '1'); ?> />
-                    <strong>Temperature</strong>
-                </label>
-                <div class="ai-chatbot-optional-body" style="display:<?php echo $meta['chatbot_temperature_enabled'] === '1' ? 'inline-flex' : 'none'; ?>;align-items:center;gap:6px;">
-                    <input type="range" id="chatbot_temperature" name="chatbot_temperature" value="<?php echo esc_attr($meta['chatbot_temperature']); ?>" step="0.1" min="0" max="2" style="width:120px;vertical-align:middle;" />
-                    <span id="ai-chatbot-temp-val" style="font-size:13px;min-width:18px;"><?php echo esc_html($meta['chatbot_temperature']); ?></span>
-                </div>
-            </div>
-            <div class="description" style="margin-top:2px;">Controls the randomness of the output. Lower values are more deterministic, higher values more creative. If the request fails, try disabling this.</div>
-        </div>
-
-        <!-- Extended Thinking / Reasoning -->
-        <div class="ai-chatbot-optional-row" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
-                    <input type="checkbox" name="chatbot_thinking_enabled" value="1" <?php checked($meta['chatbot_thinking_enabled'], '1'); ?> />
-                    <strong>Extended Thinking / Reasoning</strong>
-                </label>
-                <div class="ai-chatbot-optional-body" style="display:<?php echo $meta['chatbot_thinking_enabled'] === '1' ? 'inline-flex' : 'none'; ?>;align-items:center;gap:6px;">
-                    <?php
-                    $effort_labels = ['low', 'medium', 'high', 'xhigh', 'max'];
-                    $effort_index = array_search($meta['chatbot_reasoning_effort'], $effort_labels, true);
-                    $effort_index = $effort_index !== false ? $effort_index : 1;
-                    ?>
-                    <input type="range" id="chatbot_reasoning_effort_slider" value="<?php echo esc_attr($effort_index); ?>" step="1" min="0" max="4" style="width:120px;vertical-align:middle;" />
-                    <input type="hidden" id="chatbot_reasoning_effort" name="chatbot_reasoning_effort" value="<?php echo esc_attr($meta['chatbot_reasoning_effort']); ?>" />
-                    <span id="ai-chatbot-effort-val" style="font-size:13px;min-width:60px;"><?php echo esc_html(ucfirst($meta['chatbot_reasoning_effort'])); ?></span>
-                </div>
-            </div>
-            <div class="description" style="margin-top:2px;">Enables extended thinking and reasoning (Anthropic: sends <code>thinking</code> + <code>output_config.effort</code>; OpenAI-compatible: sends <code>reasoning_effort</code>). Not supported by standard models (gpt-4o etc.). If the request fails, try disabling this.</div>
-        </div>
+        <?php if (empty($providers)): ?>
+            <div class="description ai-chatbot-provider-warning"><?php esc_html_e('Create and publish an API Provider before this chatbot can send messages.', 'wp-aigent'); ?></div>
+        <?php endif; ?>
     </div>
     <div class="ai-chatbot-tab-panel" data-tab="system">
         <div class="ai-chatbot-field">

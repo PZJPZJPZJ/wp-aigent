@@ -3,8 +3,8 @@
 
     $(function() {
         var config = window.aiProviderAdmin || {};
-        var $platform = $('#provider_platform');
-        var $baseUrl = $('#provider_api_base_url');
+        var $protocol = $('#api_provider_protocol');
+        var $baseUrl = $('#api_provider_base_url');
         var $fetchButton = $('#js-provider-fetch-models');
         var $editButton = $('#js-provider-edit-models');
         var $status = $('#js-provider-fetch-status');
@@ -12,11 +12,13 @@
         var $inputWrap = $('#js-provider-model-input-wrap');
         var $input = $('#js-provider-model-input');
         var defaults = {
-            openai: 'https://api.openai.com/v1',
-            anthropic: 'https://api.anthropic.com/v1'
+            openai_completions: 'https://api.openai.com/v1',
+            openai_responses: 'https://api.openai.com/v1',
+            anthropic: 'https://api.anthropic.com/v1',
+            gemini: 'https://generativelanguage.googleapis.com/v1beta'
         };
 
-        $platform.on('change', function() {
+        $protocol.on('change', function() {
             var next = defaults[$(this).val()];
             var current = $baseUrl.val().replace(/\/+$/, '');
             var isDefault = Object.keys(defaults).some(function(key) {
@@ -25,7 +27,6 @@
             if (next && (current === '' || isDefault)) {
                 $baseUrl.val(next);
             }
-            $fetchButton.prop('disabled', $platform.val() === 'anthropic');
         });
 
         function createModelChip(model) {
@@ -141,7 +142,7 @@
             }).fail(function() {
                 $status.text(config.i18n.fetchFailed);
             }).always(function() {
-                $fetchButton.prop('disabled', $platform.val() === 'anthropic').text(config.i18n.fetchModels);
+                $fetchButton.prop('disabled', false).text(config.i18n.fetchModels);
             });
         });
     });

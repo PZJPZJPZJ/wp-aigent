@@ -140,8 +140,8 @@ class WP_AIGent_Plugin {
             ]);
             foreach ($providers as $provider_id) {
                 $provider_meta = AI_Chatbot_CPT_Provider::get_meta((int) $provider_id);
-                $provider_models[$provider_id] = is_array($provider_meta['provider_model_list'] ?? null)
-                    ? $provider_meta['provider_model_list']
+                $provider_models[$provider_id] = is_array($provider_meta['api_provider_model_list'] ?? null)
+                    ? $provider_meta['api_provider_model_list']
                     : [];
             }
 

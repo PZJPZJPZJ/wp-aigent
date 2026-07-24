@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP AIgent
  * Description: An all-in-one AI toolkit for WordPress, starting with AI chatbots, knowledge base Q&A, lead capture, notifications, and AI-enhanced forms.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 6.7
  * Requires PHP: 8.0
  * Author: AzzDev

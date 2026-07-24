@@ -60,16 +60,14 @@ class AI_Chatbot_CPT_Chatbot {
         if (!current_user_can('edit_post', $post_id)) return;
 
         $fields = [
-            'chatbot_primary_provider_id',
-            'chatbot_primary_model',
-            'chatbot_fallback_provider_id',
-            'chatbot_fallback_model',
-            'chatbot_temperature',
-            'chatbot_temperature_enabled',
-            'chatbot_max_tokens',
-            'chatbot_input_tokens',
-            'chatbot_thinking_enabled',
-            'chatbot_reasoning_effort',
+            'chatbot_primary_api_provider_id',
+            'chatbot_primary_api_model',
+            'chatbot_primary_reasoning_effort',
+            'chatbot_primary_output_tokens',
+            'chatbot_fallback_api_provider_id',
+            'chatbot_fallback_api_model',
+            'chatbot_fallback_reasoning_effort',
+            'chatbot_fallback_output_tokens',
             'chatbot_system_prompt',
             'chatbot_ai_rules',
             'chatbot_json_schema',
@@ -142,8 +140,12 @@ class AI_Chatbot_CPT_Chatbot {
                         $clean[] = $item;
                     }
                     $value = $clean;
-                } elseif (in_array($field, ['chatbot_primary_provider_id', 'chatbot_fallback_provider_id'], true)) {
+                } elseif (in_array($field, ['chatbot_primary_api_provider_id', 'chatbot_fallback_api_provider_id'], true)) {
                     $value = absint($value);
+                } elseif (in_array($field, ['chatbot_primary_reasoning_effort', 'chatbot_fallback_reasoning_effort'], true)) {
+                    $value = in_array($value, ['off', 'low', 'medium', 'high', 'xhigh'], true) ? $value : 'off';
+                } elseif (in_array($field, ['chatbot_primary_output_tokens', 'chatbot_fallback_output_tokens'], true)) {
+                    $value = min(128000, max(1, absint($value)));
                 } elseif ($field === 'chatbot_knowledge_ids' && is_array($value)) {
                     $value = array_map('intval', $value);
                 } elseif ($field === 'chatbot_lead_fields' && is_array($value)) {
@@ -166,7 +168,7 @@ class AI_Chatbot_CPT_Chatbot {
                 update_post_meta($post_id, $field, $value);
             } else {
                 // Handle empty/unchecked fields (checkboxes etc.)
-                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_temperature_enabled', 'chatbot_thinking_enabled', 'chatbot_notify_inactivity_enabled'];
+                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_notify_inactivity_enabled'];
                 if ($field === 'chatbot_knowledge_ids') {
                     update_post_meta($post_id, $field, []);
                 } elseif (in_array($field, $checkbox_fields, true)) {
@@ -190,16 +192,15 @@ class AI_Chatbot_CPT_Chatbot {
 
     public static function get_defaults(): array {
         return [
-            'chatbot_primary_provider_id'  => 0,
-            'chatbot_primary_model'        => '',
-            'chatbot_fallback_provider_id' => 0,
-            'chatbot_fallback_model'       => '',
-            'chatbot_temperature'           => '0.2',
-            'chatbot_temperature_enabled'  => '0',
-            'chatbot_max_tokens'            => '4096',
-            'chatbot_input_tokens'           => '128000',
-            'chatbot_thinking_enabled'      => '0',
-            'chatbot_reasoning_effort'      => 'medium',
+            // Legacy AI model settings are intentionally not read or migrated.
+            'chatbot_primary_api_provider_id' => 0,
+            'chatbot_primary_api_model'       => '',
+            'chatbot_primary_reasoning_effort' => 'off',
+            'chatbot_primary_output_tokens'    => '4096',
+            'chatbot_fallback_api_provider_id' => 0,
+            'chatbot_fallback_api_model'       => '',
+            'chatbot_fallback_reasoning_effort' => 'off',
+            'chatbot_fallback_output_tokens'    => '4096',
             'chatbot_system_prompt'    => self::default_system_prompt(),
             'chatbot_ai_rules'         => self::default_ai_rules(),
             'chatbot_json_schema'      => self::default_json_schema(),

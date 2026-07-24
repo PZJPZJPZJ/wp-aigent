@@ -134,64 +134,21 @@
             $(this).closest('.js-lead-field-row').remove();
         });
 
-        // ===== Optional Parameters toggles =====
-        function bindOptionalToggle(checkboxName) {
-            var toggle = document.querySelector('[name="' + checkboxName + '"]');
-            if (!toggle) return;
-            var row = toggle.closest('.ai-chatbot-optional-row');
-            if (!row) return;
-            var body = row.querySelector('.ai-chatbot-optional-body');
-            if (!body) return;
-            function handler() {
-                body.style.display = toggle.checked ? 'inline-flex' : 'none';
-            }
-            toggle.addEventListener('change', handler);
-            handler();
-        }
-        bindOptionalToggle('chatbot_temperature_enabled');
-        bindOptionalToggle('chatbot_thinking_enabled');
-
-        // ===== Reasoning Effort Slider (0-4 → low/medium/high/xhigh/max) =====
-        var effortSlider = document.getElementById('chatbot_reasoning_effort_slider');
-        var effortHidden = document.getElementById('chatbot_reasoning_effort');
-        var effortDisplay = document.getElementById('ai-chatbot-effort-val');
-        var effortLabels = ['low', 'medium', 'high', 'xhigh', 'max'];
-        if (effortSlider && effortHidden && effortDisplay) {
-            effortSlider.addEventListener('input', function() {
-                var idx = parseInt(this.value, 10);
-                var label = effortLabels[idx] || 'medium';
-                effortHidden.value = label;
-                effortDisplay.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-            });
-        }
-
-        // ===== Range slider live values =====
-        function bindRangeSlider(inputId, displayId, formatter) {
-            var input = document.getElementById(inputId);
-            var display = document.getElementById(displayId);
-            if (input && display) {
-                input.addEventListener('input', function() {
-                    display.textContent = formatter ? formatter(this.value) : this.value;
-                });
-            }
-        }
-        bindRangeSlider('chatbot_temperature', 'ai-chatbot-temp-val');
-
         // ===== Model Selects: Read Saved Provider Models =====
         var modelControls = [
             {
-                provider: $('#chatbot_primary_provider_id'),
-                select: $('#chatbot_primary_model')
+                provider: $('#chatbot_primary_api_provider_id'),
+                select: $('#chatbot_primary_api_model')
             },
             {
-                provider: $('#chatbot_fallback_provider_id'),
-                select: $('#chatbot_fallback_model')
+                provider: $('#chatbot_fallback_api_provider_id'),
+                select: $('#chatbot_fallback_api_model')
             }
         ];
 
         function populateModelSelect(control) {
             var models = (config.providerModels && config.providerModels[control.provider.val()]) || [];
-            var currentModel = control.select.data('selected') || control.select.val();
+            var currentModel = control.select.val();
 
             control.select.find('option:not([value=""])').remove();
             $.each(models, function(_, model) {
@@ -203,15 +160,12 @@
             } else {
                 control.select.val('');
             }
-            control.select.removeData('selected');
         }
 
         $.each(modelControls, function(_, control) {
             control.provider.on('change', function() {
                 populateModelSelect(control);
             });
-
-            populateModelSelect(control);
         });
 
         // ===== Inactivity Timeout: Enable/Disable =====
