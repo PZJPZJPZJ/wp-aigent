@@ -27,6 +27,7 @@ class WP_AIGent_Plugin {
 
         // Core engine
         require_once $includes . 'ai-chatbot/class-ai-client.php';
+        require_once $includes . 'ai-chatbot/class-token-usage.php';
         require_once $includes . 'ai-chatbot/class-knowledge-indexer.php';
         require_once $includes . 'ai-chatbot/class-knowledge-card-service.php';
         require_once $includes . 'ai-chatbot/class-knowledge-catalog.php';

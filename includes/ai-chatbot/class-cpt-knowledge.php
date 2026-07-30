@@ -61,7 +61,6 @@ class AI_Chatbot_CPT_Knowledge {
             update_post_meta($post_id, 'knowledge_metadata_provider_id', absint($_POST['knowledge_metadata_provider_id'] ?? 0));
             update_post_meta($post_id, 'knowledge_metadata_model', sanitize_text_field(wp_unslash($_POST['knowledge_metadata_model'] ?? '')));
             $cards = new AI_Chatbot_Knowledge_Card_Service();
-            $cards->rebuild_index($post_id, $markdown);
             update_post_meta($post_id, 'knowledge_card_status', 'generating');
             $metadata = $cards->generate_metadata($post_id, $markdown, trim((string) $post->post_title) === '');
             if (($metadata['error'] ?? '') === 'not_configured') {

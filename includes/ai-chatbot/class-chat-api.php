@@ -148,14 +148,15 @@ class AI_Chatbot_Chat_API {
                 $result['model'] ?? $config['chatbot_primary_api_model'] ?? '',
                 $result['error'],
                 $primary_ai_config['api_reasoning_effort'] ?? 'off',
-                $knowledge_trace
+                $knowledge_trace,
+                (int) ($result['duration_ms'] ?? 0)
             );
             return self::error('ai_error', 'AI service error. Please try again.', 502);
         }
 
         $ai_content = $result['content'];
         $token_usage = $result['raw']['usage'] ?? [];
-        $normalized_usage = self::normalize_token_usage($token_usage);
+        $normalized_usage = AI_Chatbot_Token_Usage::normalize($token_usage);
 
         // Parse lead
         $lead_processor = new AI_Chatbot_Lead_Processor();
@@ -165,7 +166,7 @@ class AI_Chatbot_Chat_API {
             $used_effort = ($result['model'] ?? '') === ($fallback_ai_config['api_model'] ?? null)
                 ? ($fallback_ai_config['api_reasoning_effort'] ?? 'off')
                 : ($primary_ai_config['api_reasoning_effort'] ?? 'off');
-            $memory->append($conversation_id, $message, $ai_content, $normalized_usage, $result['model'] ?? '', '', $used_effort, $knowledge_trace);
+            $memory->append($conversation_id, $message, $ai_content, $normalized_usage, $result['model'] ?? '', '', $used_effort, $knowledge_trace, (int) ($result['duration_ms'] ?? 0));
             update_post_meta($conversation_id, 'conversation_last_activity', time());
             return new WP_REST_Response([
                 'ok'   => true,
@@ -187,7 +188,7 @@ class AI_Chatbot_Chat_API {
         $used_effort = ($result['model'] ?? '') === ($fallback_ai_config['api_model'] ?? null)
             ? ($fallback_ai_config['api_reasoning_effort'] ?? 'off')
             : ($primary_ai_config['api_reasoning_effort'] ?? 'off');
-        $memory->append($conversation_id, $message, $reply, $normalized_usage, $result['model'] ?? $config['chatbot_primary_api_model'] ?? '', '', $used_effort, $knowledge_trace);
+        $memory->append($conversation_id, $message, $reply, $normalized_usage, $result['model'] ?? $config['chatbot_primary_api_model'] ?? '', '', $used_effort, $knowledge_trace, (int) ($result['duration_ms'] ?? 0));
 
         // Record last activity timestamp for inactivity timeout detection
         update_post_meta($conversation_id, 'conversation_last_activity', time());
@@ -450,51 +451,6 @@ class AI_Chatbot_Chat_API {
             'code'    => $code,
             'message' => $message,
         ], $status);
-    }
-
-    /**
-     * Normalize token usage from various API formats (OpenAI, Anthropic, etc.)
-     * into a consistent shape for storage and display.
-     */
-    private static function normalize_token_usage(array $usage): array {
-        // Already normalized (OpenAI-compatible format)
-        if (isset($usage['prompt_tokens']) || isset($usage['completion_tokens'])) {
-            $normalized = [
-                'prompt_tokens'     => (int) ($usage['prompt_tokens'] ?? 0),
-                'completion_tokens' => (int) ($usage['completion_tokens'] ?? 0),
-                'total_tokens'      => (int) ($usage['total_tokens'] ?? 0),
-            ];
-
-            // Extract cached tokens from OpenAI's nested details
-            if (!empty($usage['prompt_tokens_details']['cached_tokens'])) {
-                $normalized['cached_tokens'] = (int) $usage['prompt_tokens_details']['cached_tokens'];
-            }
-
-            return $normalized;
-        }
-
-        // Anthropic format
-        if (isset($usage['input_tokens']) || isset($usage['output_tokens'])) {
-            $prompt = (int) ($usage['input_tokens'] ?? 0);
-            $completion = (int) ($usage['output_tokens'] ?? 0);
-            $normalized = [
-                'prompt_tokens'     => $prompt,
-                'completion_tokens' => $completion,
-                'total_tokens'      => $prompt + $completion,
-            ];
-
-            // Anthropic cache tokens
-            if (!empty($usage['cache_read_input_tokens'])) {
-                $normalized['cached_tokens'] = (int) $usage['cache_read_input_tokens'];
-            }
-            if (!empty($usage['cache_creation_input_tokens'])) {
-                $normalized['cached_tokens'] = ($normalized['cached_tokens'] ?? 0) + (int) $usage['cache_creation_input_tokens'];
-            }
-
-            return $normalized;
-        }
-
-        return [];
     }
 
     /**

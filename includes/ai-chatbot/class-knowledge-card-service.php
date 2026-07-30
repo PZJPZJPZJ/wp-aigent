@@ -38,10 +38,6 @@ class AI_Chatbot_Knowledge_Card_Service {
         update_post_meta($document_id, 'knowledge_card_status', 'ready');
     }
 
-    public function rebuild_index(int $document_id, string $markdown): void {
-        $this->index($document_id, $markdown);
-    }
-
     public function clear_generated_metadata(int $document_id): void {
         delete_post_meta($document_id, 'knowledge_card_description');
         delete_post_meta($document_id, 'knowledge_tags');
@@ -59,9 +55,5 @@ class AI_Chatbot_Knowledge_Card_Service {
             'status' => (string) (get_post_meta($document_id, 'knowledge_card_status', true) ?: 'stale'),
             'source' => (string) get_post_meta($document_id, 'knowledge_card_source', true),
         ];
-    }
-
-    private function index(int $document_id, string $markdown): void {
-        (new AI_Chatbot_Knowledge_Indexer())->rebuild($document_id, $markdown);
     }
 }

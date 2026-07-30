@@ -20,7 +20,14 @@ class AI_Chatbot_Knowledge_Loader {
             if (!empty($router_options['config']) && !empty($router_options['model'])) {
                 $route = (new AI_Chatbot_Knowledge_Router())->route(new AI_Chatbot_AI_Client($router_options['config'], $router_options['fallback_config']), $question, $candidates, $router_options);
                 $call = $route['call'] ?? [];
-                $trace['router'] = ['status' => $route['status'] ?? 'unknown', 'document_ids' => $route['document_ids'] ?? [], 'confidence' => $route['confidence'] ?? 0, 'model' => $call['model'] ?? '', 'duration_ms' => $call['duration_ms'] ?? 0];
+                $trace['router'] = [
+                    'status' => $route['status'] ?? 'unknown',
+                    'document_ids' => $route['document_ids'] ?? [],
+                    'confidence' => $route['confidence'] ?? 0,
+                    'model' => $call['model'] ?? '',
+                    'duration_ms' => $call['duration_ms'] ?? 0,
+                    'token_usage' => AI_Chatbot_Token_Usage::normalize((array) ($call['raw']['usage'] ?? [])),
+                ];
                 $ids = $route['document_ids'] ?? [];
                 if (!$ids) {
                     $failure_mode = $config['chatbot_knowledge_route_failure_mode'] ?? 'local_fallback';
@@ -43,9 +50,9 @@ class AI_Chatbot_Knowledge_Loader {
             $ids = array_slice(array_map(static fn($card) => (int) $card['id'], $candidates), 0, (int) $config['chatbot_knowledge_max_documents']);
             if ($mode === 'local') $trace['status'] = $ids ? 'local' : 'no_match';
         }
-        $result = (new AI_Chatbot_Knowledge_Retriever())->retrieve($ids, $question, $config);
+        $result = (new AI_Chatbot_Knowledge_Retriever())->retrieve($ids);
         $trace['document_ids'] = $ids;
-        $trace['sources'] = array_map(static fn($source) => ['id' => $source['id'], 'title' => $source['title'], 'heading' => $source['heading']], $result['sources']);
+        $trace['sources'] = array_map(static fn($source) => ['id' => $source['id'], 'document_id' => $source['document_id'], 'title' => $source['title'], 'heading' => $source['heading']], $result['sources']);
         $trace['token_estimate'] = $result['token_estimate'];
         return ['context' => $result['context'], 'trace' => $trace];
     }

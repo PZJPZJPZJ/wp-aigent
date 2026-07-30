@@ -66,22 +66,52 @@ defined('ABSPATH') || exit;
         } else {
             echo '<div class="ai-conv-messages-scroll" style="max-height:420px;overflow-y:auto;">';
             echo '<table class="ai-conv-msg-table widefat">';
+            $format_token_usage = static function (array $usage): array {
+                $parts = [];
+                if (isset($usage['total_tokens'])) $parts[] = 'Total:' . AI_Chatbot_CPT_Conversation::format_token_number((int) $usage['total_tokens']);
+                if (isset($usage['prompt_tokens'])) $parts[] = 'Input:' . AI_Chatbot_CPT_Conversation::format_token_number((int) $usage['prompt_tokens']);
+                if (isset($usage['completion_tokens'])) $parts[] = 'Output:' . AI_Chatbot_CPT_Conversation::format_token_number((int) $usage['completion_tokens']);
+                if (!empty($usage['cached_tokens'])) $parts[] = 'Cache:' . AI_Chatbot_CPT_Conversation::format_token_number((int) $usage['cached_tokens']);
+                return $parts;
+            };
+            $format_knowledge_trace = static function (array $trace) use ($format_token_usage): string {
+                if (!$trace) return '';
+                $parts = [sprintf(
+                    __('Knowledge: %1$s · %2$s', 'wp-aigent'),
+                    $trace['mode'] ?? '—',
+                    $trace['status'] ?? '—'
+                )];
+                $titles_by_id = [];
+                foreach ((array) ($trace['sources'] ?? []) as $source) {
+                    $document_id = absint($source['document_id'] ?? 0);
+                    if (!$document_id && preg_match('/^K(\d+)/', (string) ($source['id'] ?? ''), $matches)) {
+                        $document_id = absint($matches[1]);
+                    }
+                    $title = sanitize_text_field($source['title'] ?? '');
+                    if ($document_id && $title !== '') $titles_by_id[$document_id] = $title;
+                }
+                $document_labels = [];
+                foreach (array_values(array_filter(array_map('absint', (array) ($trace['document_ids'] ?? [])))) as $document_id) {
+                    $document_labels[] = '#' . $document_id . (isset($titles_by_id[$document_id]) ? ' (' . $titles_by_id[$document_id] . ')' : '');
+                }
+                if ($document_labels) $parts[] = __('Documents:', 'wp-aigent') . ' ' . implode(', ', array_unique($document_labels));
+                if (!empty($trace['router'])) {
+                    $router = $trace['router'];
+                    $router_usage = $format_token_usage((array) ($router['token_usage'] ?? []));
+                    if (!empty($router['model']) || !empty($router['duration_ms']) || $router_usage) {
+                        $router_info = sprintf(
+                            __('Model:%1$s · Duration:%2$d ms', 'wp-aigent'),
+                            $router['model'] ?? '—',
+                            (int) ($router['duration_ms'] ?? 0)
+                        );
+                        if ($router_usage) $router_info .= ' · ' . implode(' · ', $router_usage);
+                        $parts[] = $router_info;
+                    }
+                }
+                return implode(' | ', $parts);
+            };
             foreach ($messages as $msg) {
                 $role = $msg['role'];
-                if ($role === 'knowledge') {
-                    $trace = (array) ($msg['trace'] ?? []);
-                    $candidate_labels = array_map(static fn($item) => '#' . ($item['id'] ?? '?') . ' ' . ($item['title'] ?? ''), (array) ($trace['candidates'] ?? []));
-                    $source_labels = array_map(static fn($item) => ($item['id'] ?? '') . ' ' . ($item['title'] ?? ''), (array) ($trace['sources'] ?? []));
-                    echo '<tr class="ai-conv-msg-knowledge">';
-                    echo '<td class="ai-conv-msg-label">' . esc_html__('Knowledge', 'wp-aigent') . '</td>';
-                    echo '<td class="ai-conv-msg-content"><strong>' . esc_html__('Knowledge call', 'wp-aigent') . '</strong>';
-                    echo '<div class="ai-conv-msg-info">' . esc_html(sprintf(__('Mode: %1$s | Result: %2$s | Documents: %3$s | Estimated tokens: %4$s', 'wp-aigent'), $trace['mode'] ?? '—', $trace['status'] ?? '—', implode(', ', (array) ($trace['document_ids'] ?? [])) ?: '—', $trace['token_estimate'] ?? 0)) . '</div>';
-                    if ($candidate_labels) echo '<div class="ai-conv-msg-info">' . esc_html__('Candidates:', 'wp-aigent') . ' ' . esc_html(implode(' | ', $candidate_labels)) . '</div>';
-                    if (!empty($trace['router'])) echo '<div class="ai-conv-msg-info">' . esc_html(sprintf(__('Router: %1$s | Model: %2$s | %3$d ms', 'wp-aigent'), $trace['router']['status'] ?? '—', $trace['router']['model'] ?? '—', (int) ($trace['router']['duration_ms'] ?? 0))) . '</div>';
-                    if ($source_labels) echo '<div class="ai-conv-msg-info">' . esc_html__('Injected sources:', 'wp-aigent') . ' ' . esc_html(implode(' | ', $source_labels)) . '</div>';
-                    echo '</td></tr>';
-                    continue;
-                }
                 $css_class = 'ai-conv-msg-' . $role;
                 $label = ($role === 'user') ? __('User', 'wp-aigent') : __('Assistant', 'wp-aigent');
 
@@ -100,6 +130,11 @@ defined('ABSPATH') || exit;
                     if (!empty($msg['model'])) {
                         echo '<div class="ai-conv-msg-info">Model: ' . esc_html($msg['model']) . '</div>';
                     }
+                    if (!empty($msg['duration_ms'])) {
+                        echo '<div class="ai-conv-msg-info">' . esc_html__('Duration:', 'wp-aigent') . ' ' . (int) $msg['duration_ms'] . ' ms</div>';
+                    }
+                    $knowledge_info = $format_knowledge_trace((array) ($msg['knowledge_trace'] ?? []));
+                    if ($knowledge_info !== '') echo '<div class="ai-conv-msg-knowledge-info">' . esc_html($knowledge_info) . '</div>';
                     echo '</td>';
                 } else {
                     // Normal message
@@ -109,13 +144,7 @@ defined('ABSPATH') || exit;
                         echo '<span class="ai-conv-msg-success-text">' . esc_html($content) . '</span>';
                         $info_parts = [];
                         // Token usage
-                        if (!empty($msg['token_usage'])) {
-                            $tu = $msg['token_usage'];
-                            if (isset($tu['total_tokens'])) $info_parts[] = 'Total:' . AI_Chatbot_CPT_Conversation::format_token_number($tu['total_tokens']);
-                            if (isset($tu['prompt_tokens'])) $info_parts[] = 'Input:' . AI_Chatbot_CPT_Conversation::format_token_number($tu['prompt_tokens']);
-                            if (isset($tu['completion_tokens'])) $info_parts[] = 'Output:' . AI_Chatbot_CPT_Conversation::format_token_number($tu['completion_tokens']);
-                            if (!empty($tu['cached_tokens'])) $info_parts[] = 'Cache:' . AI_Chatbot_CPT_Conversation::format_token_number($tu['cached_tokens']);
-                        }
+                        $info_parts = $format_token_usage((array) ($msg['token_usage'] ?? []));
                         // Model name
                         if (!empty($msg['model'])) {
                             $info_parts[] = 'Model:' . $msg['model'];
@@ -128,9 +157,14 @@ defined('ABSPATH') || exit;
                         if (!empty($msg['time'])) {
                             $info_parts[] = 'Time:' . $msg['time'] . ' ' . wp_timezone_string();
                         }
+                        if (!empty($msg['duration_ms'])) {
+                            $info_parts[] = 'Duration:' . (int) $msg['duration_ms'] . ' ms';
+                        }
                         if (!empty($info_parts)) {
                             echo '<div class="ai-conv-msg-info">' . esc_html(implode(' | ', $info_parts)) . '</div>';
                         }
+                        $knowledge_info = $format_knowledge_trace((array) ($msg['knowledge_trace'] ?? []));
+                        if ($knowledge_info !== '') echo '<div class="ai-conv-msg-knowledge-info">' . esc_html($knowledge_info) . '</div>';
                     } else {
                         echo esc_html($content);
                     }

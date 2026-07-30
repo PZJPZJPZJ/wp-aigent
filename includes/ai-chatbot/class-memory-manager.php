@@ -37,7 +37,7 @@ class AI_Chatbot_Memory_Manager {
     /**
      * Append a message exchange to the conversation history.
      */
-    public function append(int $conversation_id, string $user_message, string $assistant_reply, array $token_usage = [], string $model = '', string $error = '', string $effort = '', array $knowledge_trace = []): void {
+    public function append(int $conversation_id, string $user_message, string $assistant_reply, array $token_usage = [], string $model = '', string $error = '', string $effort = '', array $knowledge_trace = [], int $duration_ms = 0): void {
         if (!$conversation_id) {
             return;
         }
@@ -53,6 +53,9 @@ class AI_Chatbot_Memory_Manager {
         }
         if (!empty($knowledge_trace)) {
             $exchange['knowledge_trace'] = $knowledge_trace;
+        }
+        if ($duration_ms > 0) {
+            $exchange['duration_ms'] = $duration_ms;
         }
 
         if (!empty($error)) {
