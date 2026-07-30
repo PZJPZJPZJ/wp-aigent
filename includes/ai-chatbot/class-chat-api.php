@@ -176,7 +176,6 @@ class AI_Chatbot_Chat_API {
                     'conversation_id'  => $conversation_id,
                     'lead_score'       => 'D',
                     'should_collect_contact' => false,
-                    'citations'        => !empty($config['chatbot_knowledge_show_citations']) ? ($knowledge_trace['sources'] ?? []) : [],
                 ],
             ], 200);
         }
@@ -216,7 +215,6 @@ class AI_Chatbot_Chat_API {
                 'conversation_id'  => $conversation_id,
                 'lead_score'       => $lead_data['lead_score'] ?? 'D',
                 'should_collect_contact' => self::evaluate_lead_capture($parsed, $config),
-                'citations'        => !empty($config['chatbot_knowledge_show_citations']) ? ($knowledge_trace['sources'] ?? []) : [],
             ],
         ], 200);
     }

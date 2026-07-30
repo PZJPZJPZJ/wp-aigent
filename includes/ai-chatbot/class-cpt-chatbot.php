@@ -75,8 +75,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_mode',
             'chatbot_knowledge_router_provider_id',
             'chatbot_knowledge_router_model',
-            'chatbot_knowledge_router_fallback_provider_id',
-            'chatbot_knowledge_router_fallback_model',
             'chatbot_knowledge_router_max_tokens',
             'chatbot_knowledge_router_timeout',
             'chatbot_knowledge_catalog_budget',
@@ -85,7 +83,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_context_budget',
             'chatbot_knowledge_max_chunks_per_document',
             'chatbot_knowledge_route_failure_mode',
-            'chatbot_knowledge_show_citations',
             'chatbot_max_history',
             'chatbot_session_ttl',
             'chatbot_lead_fields',
@@ -154,7 +151,7 @@ class AI_Chatbot_CPT_Chatbot {
                         $clean[] = $item;
                     }
                     $value = $clean;
-                } elseif (in_array($field, ['chatbot_primary_api_provider_id', 'chatbot_fallback_api_provider_id', 'chatbot_knowledge_router_provider_id', 'chatbot_knowledge_router_fallback_provider_id'], true)) {
+                } elseif (in_array($field, ['chatbot_primary_api_provider_id', 'chatbot_fallback_api_provider_id', 'chatbot_knowledge_router_provider_id'], true)) {
                     $value = absint($value);
                 } elseif (in_array($field, ['chatbot_primary_reasoning_effort', 'chatbot_fallback_reasoning_effort'], true)) {
                     $value = in_array($value, ['off', 'low', 'medium', 'high', 'xhigh'], true) ? $value : 'off';
@@ -163,7 +160,7 @@ class AI_Chatbot_CPT_Chatbot {
                 } elseif ($field === 'chatbot_knowledge_mode') {
                     $value = in_array($value, ['llm_router', 'local', 'full_text_legacy', 'off'], true) ? $value : 'local';
                 } elseif ($field === 'chatbot_knowledge_route_failure_mode') {
-                    $value = in_array($value, ['local_fallback', 'answer_without_knowledge'], true) ? $value : 'local_fallback';
+                    $value = in_array($value, ['local_fallback', 'full_text_legacy', 'off'], true) ? $value : 'local_fallback';
                 } elseif ($field === 'chatbot_knowledge_ids' && is_array($value)) {
                     $value = array_map('intval', $value);
                 } elseif ($field === 'chatbot_lead_fields' && is_array($value)) {
@@ -186,7 +183,7 @@ class AI_Chatbot_CPT_Chatbot {
                 update_post_meta($post_id, $field, $value);
             } else {
                 // Handle empty/unchecked fields (checkboxes etc.)
-                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_notify_inactivity_enabled', 'chatbot_knowledge_show_citations'];
+                $checkbox_fields = ['chatbot_notify_enabled', 'chatbot_lead_capture_enabled', 'chatbot_notify_inactivity_enabled'];
                 if ($field === 'chatbot_knowledge_ids') {
                     update_post_meta($post_id, $field, []);
                 } elseif (in_array($field, $checkbox_fields, true)) {
@@ -223,11 +220,9 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_ai_rules'         => self::default_ai_rules(),
             'chatbot_json_schema'      => self::default_json_schema(),
             'chatbot_knowledge_ids'    => [],
-            'chatbot_knowledge_mode' => 'local',
+            'chatbot_knowledge_mode' => 'llm_router',
             'chatbot_knowledge_router_provider_id' => 0,
             'chatbot_knowledge_router_model' => '',
-            'chatbot_knowledge_router_fallback_provider_id' => 0,
-            'chatbot_knowledge_router_fallback_model' => '',
             'chatbot_knowledge_router_max_tokens' => '200',
             'chatbot_knowledge_router_timeout' => '10',
             'chatbot_knowledge_catalog_budget' => '4000',
@@ -236,7 +231,6 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_context_budget' => '1800',
             'chatbot_knowledge_max_chunks_per_document' => '2',
             'chatbot_knowledge_route_failure_mode' => 'local_fallback',
-            'chatbot_knowledge_show_citations' => '0',
             'chatbot_max_history'      => '10',
             'chatbot_session_ttl'      => '168',
             'chatbot_lead_fields'      => self::load_default_json('lead-fields.json', [

@@ -146,12 +146,7 @@
             },
             {
                 provider: $('#chatbot_knowledge_router_provider_id'),
-                inheritProvider: $('#chatbot_primary_api_provider_id'),
                 select: $('#chatbot_knowledge_router_model')
-            },
-            {
-                provider: $('#chatbot_knowledge_router_fallback_provider_id'),
-                select: $('#chatbot_knowledge_router_fallback_model')
             },
             {
                 provider: $('#knowledge_metadata_provider_id'),
@@ -160,7 +155,10 @@
         ];
 
         function populateModelSelect(control) {
-            var providerId = control.provider.val() || (control.inheritProvider && control.inheritProvider.val());
+            var providerId = control.provider.val();
+            if (control.inheritProvider && control.inheritValues && control.inheritValues.indexOf(String(providerId)) !== -1) {
+                providerId = control.inheritProvider.val();
+            }
             var models = (config.providerModels && config.providerModels[providerId]) || [];
             var currentModel = control.select.val();
 
@@ -182,7 +180,7 @@
             });
             if (control.inheritProvider) {
                 control.inheritProvider.on('change', function() {
-                    if (!control.provider.val()) populateModelSelect(control);
+                    if (control.inheritValues.indexOf(String(control.provider.val())) !== -1) populateModelSelect(control);
                 });
             }
         });

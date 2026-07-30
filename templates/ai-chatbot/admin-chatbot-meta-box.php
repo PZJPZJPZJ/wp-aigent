@@ -103,6 +103,45 @@ foreach ($providers as $provider) {
                     </div>
                 </section>
             <?php endforeach; ?>
+            <?php
+            $router_cards = [
+                'router' => [
+                    'title' => __('Knowledge Router', 'wp-aigent'),
+                    'provider_id' => 'chatbot_knowledge_router_provider_id',
+                    'model' => 'chatbot_knowledge_router_model',
+                    'provider_empty' => __('— Select a provider —', 'wp-aigent'),
+                    'model_empty' => __('— Select a model —', 'wp-aigent'),
+                    'description' => __('Selects relevant knowledge documents before the answer model runs. A fast, low-cost model is usually best.', 'wp-aigent'),
+                ],
+            ];
+            foreach ($router_cards as $key => $card):
+                $configured_provider_id = (int) $meta[$card['provider_id']];
+                $effective_provider_id = $configured_provider_id;
+                $models = $provider_models_by_id[$effective_provider_id] ?? [];
+            ?>
+                <section class="ai-chatbot-provider-config-card">
+                    <h3><?php echo esc_html($card['title']); ?></h3>
+                    <p><?php echo esc_html($card['description']); ?></p>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['provider_id']); ?>"><?php esc_html_e('API Provider', 'wp-aigent'); ?></label>
+                        <select id="<?php echo esc_attr($card['provider_id']); ?>" name="<?php echo esc_attr($card['provider_id']); ?>">
+                            <option value="0"><?php echo esc_html($card['provider_empty']); ?></option>
+                            <?php foreach ($providers as $provider): ?><option value="<?php echo esc_attr($provider->ID); ?>" <?php selected($configured_provider_id, $provider->ID); ?>><?php echo esc_html($provider->post_title . ' · ' . strtoupper(str_replace('_', ' ', $provider_meta_by_id[$provider->ID]['api_provider_protocol']))); ?></option><?php endforeach; ?>
+                        </select>
+                        <div class="description"><?php esc_html_e('Choose the saved connection used only to select relevant knowledge documents.', 'wp-aigent'); ?></div>
+                    </div>
+                    <div class="ai-chatbot-field">
+                        <label for="<?php echo esc_attr($card['model']); ?>"><?php esc_html_e('Model', 'wp-aigent'); ?></label>
+                        <select id="<?php echo esc_attr($card['model']); ?>" name="<?php echo esc_attr($card['model']); ?>">
+                            <option value=""><?php echo esc_html($card['model_empty']); ?></option>
+                            <?php foreach ($models as $model): ?><option value="<?php echo esc_attr($model); ?>" <?php selected($meta[$card['model']], $model); ?>><?php echo esc_html($model); ?></option><?php endforeach; ?>
+                        </select>
+                        <div class="description"><?php esc_html_e('Models are loaded from the selected API Provider.', 'wp-aigent'); ?></div>
+                    </div>
+                    <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_max_tokens"><?php esc_html_e('Router Output Tokens', 'wp-aigent'); ?></label><input type="number" id="chatbot_knowledge_router_max_tokens" name="chatbot_knowledge_router_max_tokens" value="<?php echo esc_attr($meta['chatbot_knowledge_router_max_tokens']); ?>" min="32" max="500" /><div class="description"><?php esc_html_e('The router returns only document IDs, so 200 tokens is normally enough.', 'wp-aigent'); ?></div></div>
+                    <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_timeout"><?php esc_html_e('Router Timeout (seconds)', 'wp-aigent'); ?></label><input type="number" id="chatbot_knowledge_router_timeout" name="chatbot_knowledge_router_timeout" value="<?php echo esc_attr($meta['chatbot_knowledge_router_timeout']); ?>" min="1" max="30" /><div class="description"><?php esc_html_e('Use a short timeout so Router Failure can take over without making visitors wait.', 'wp-aigent'); ?></div></div>
+                </section>
+            <?php endforeach; ?>
         </div>
         <?php if (empty($providers)): ?>
             <div class="description ai-chatbot-provider-warning"><?php esc_html_e('Create and publish an API Provider before this chatbot can send messages.', 'wp-aigent'); ?></div>
@@ -236,25 +275,13 @@ foreach ($providers as $provider) {
     <!-- Knowledge -->
     <div class="ai-chatbot-tab-panel" data-tab="knowledge">
         <div class="ai-chatbot-field-row">
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_mode"><?php esc_html_e('Retrieval Mode', 'wp-aigent'); ?></label><select id="chatbot_knowledge_mode" name="chatbot_knowledge_mode"><option value="llm_router" <?php selected($meta['chatbot_knowledge_mode'], 'llm_router'); ?>><?php esc_html_e('LLM Router', 'wp-aigent'); ?></option><option value="local" <?php selected($meta['chatbot_knowledge_mode'], 'local'); ?>><?php esc_html_e('Local Retrieval', 'wp-aigent'); ?></option><option value="full_text_legacy" <?php selected($meta['chatbot_knowledge_mode'], 'full_text_legacy'); ?>><?php esc_html_e('Full-text Compatibility', 'wp-aigent'); ?></option><option value="off" <?php selected($meta['chatbot_knowledge_mode'], 'off'); ?>><?php esc_html_e('Off', 'wp-aigent'); ?></option></select><div class="description"><?php esc_html_e('LLM Router discovers a document from cards before loading indexed chunks. Local Retrieval skips the extra model call.', 'wp-aigent'); ?></div></div>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_route_failure_mode"><?php esc_html_e('Router Failure', 'wp-aigent'); ?></label><select id="chatbot_knowledge_route_failure_mode" name="chatbot_knowledge_route_failure_mode"><option value="local_fallback" <?php selected($meta['chatbot_knowledge_route_failure_mode'], 'local_fallback'); ?>><?php esc_html_e('Use local retrieval', 'wp-aigent'); ?></option><option value="answer_without_knowledge" <?php selected($meta['chatbot_knowledge_route_failure_mode'], 'answer_without_knowledge'); ?>><?php esc_html_e('Answer without knowledge', 'wp-aigent'); ?></option></select><label style="margin-top:10px;display:block;"><input type="checkbox" name="chatbot_knowledge_show_citations" value="1" <?php checked($meta['chatbot_knowledge_show_citations'], '1'); ?> /> <?php esc_html_e('Return source citations to the visitor', 'wp-aigent'); ?></label></div>
-        </div>
-        <h3><?php esc_html_e('Dedicated Knowledge Router', 'wp-aigent'); ?></h3>
-        <p class="description"><?php esc_html_e('This request only selects document IDs. Choose a fast, reliable model. Provider defaults can be configured in API Providers; these values override them for this chatbot.', 'wp-aigent'); ?></p>
-        <div class="ai-chatbot-field-row">
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_provider_id"><?php esc_html_e('Router Provider', 'wp-aigent'); ?></label><select id="chatbot_knowledge_router_provider_id" name="chatbot_knowledge_router_provider_id"><option value="0"><?php esc_html_e('Inherit answer provider', 'wp-aigent'); ?></option><?php foreach ($providers as $provider): ?><option value="<?php echo $provider->ID; ?>" <?php selected((int) $meta['chatbot_knowledge_router_provider_id'], $provider->ID); ?>><?php echo esc_html($provider->post_title); ?></option><?php endforeach; ?></select></div>
-            <?php $router_provider_id = (int) ($meta['chatbot_knowledge_router_provider_id'] ?: $meta['chatbot_primary_api_provider_id']); $router_models = $provider_models_by_id[$router_provider_id] ?? []; ?>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_model"><?php esc_html_e('Router Model Override', 'wp-aigent'); ?></label><select id="chatbot_knowledge_router_model" name="chatbot_knowledge_router_model"><option value=""><?php esc_html_e('Inherit answer model', 'wp-aigent'); ?></option><?php foreach ($router_models as $model): ?><option value="<?php echo esc_attr($model); ?>" <?php selected($meta['chatbot_knowledge_router_model'], $model); ?>><?php echo esc_html($model); ?></option><?php endforeach; ?></select><div class="description"><?php esc_html_e('Models are loaded from the selected Router Provider.', 'wp-aigent'); ?></div></div>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_fallback_provider_id"><?php esc_html_e('Router Fallback Provider', 'wp-aigent'); ?></label><select id="chatbot_knowledge_router_fallback_provider_id" name="chatbot_knowledge_router_fallback_provider_id"><option value="0"><?php esc_html_e('— Disabled —', 'wp-aigent'); ?></option><?php foreach ($providers as $provider): ?><option value="<?php echo $provider->ID; ?>" <?php selected((int) $meta['chatbot_knowledge_router_fallback_provider_id'], $provider->ID); ?>><?php echo esc_html($provider->post_title); ?></option><?php endforeach; ?></select></div>
-            <?php $router_fallback_models = $provider_models_by_id[(int) $meta['chatbot_knowledge_router_fallback_provider_id']] ?? []; ?>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_fallback_model"><?php esc_html_e('Router Fallback Model', 'wp-aigent'); ?></label><select id="chatbot_knowledge_router_fallback_model" name="chatbot_knowledge_router_fallback_model"><option value=""><?php esc_html_e('— Disabled —', 'wp-aigent'); ?></option><?php foreach ($router_fallback_models as $model): ?><option value="<?php echo esc_attr($model); ?>" <?php selected($meta['chatbot_knowledge_router_fallback_model'], $model); ?>><?php echo esc_html($model); ?></option><?php endforeach; ?></select></div>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_max_tokens"><?php esc_html_e('Router Output Tokens', 'wp-aigent'); ?></label><input type="number" id="chatbot_knowledge_router_max_tokens" name="chatbot_knowledge_router_max_tokens" value="<?php echo esc_attr($meta['chatbot_knowledge_router_max_tokens']); ?>" min="32" max="500" /></div>
-            <div class="ai-chatbot-field"><label for="chatbot_knowledge_router_timeout"><?php esc_html_e('Router Timeout (seconds)', 'wp-aigent'); ?></label><input type="number" id="chatbot_knowledge_router_timeout" name="chatbot_knowledge_router_timeout" value="<?php echo esc_attr($meta['chatbot_knowledge_router_timeout']); ?>" min="1" max="30" /></div>
+            <div class="ai-chatbot-field"><label for="chatbot_knowledge_mode"><?php esc_html_e('Retrieval Mode', 'wp-aigent'); ?></label><select id="chatbot_knowledge_mode" name="chatbot_knowledge_mode"><option value="llm_router" <?php selected($meta['chatbot_knowledge_mode'], 'llm_router'); ?>><?php esc_html_e('LLM Router (Recommended)', 'wp-aigent'); ?></option><option value="local" <?php selected($meta['chatbot_knowledge_mode'], 'local'); ?>><?php esc_html_e('Local Retrieval', 'wp-aigent'); ?></option><option value="full_text_legacy" <?php selected($meta['chatbot_knowledge_mode'], 'full_text_legacy'); ?>><?php esc_html_e('Full-text Compatibility', 'wp-aigent'); ?></option><option value="off" <?php selected($meta['chatbot_knowledge_mode'], 'off'); ?>><?php esc_html_e('Off', 'wp-aigent'); ?></option></select><div class="description"><?php esc_html_e('LLM Router: asks a dedicated model to choose documents, then loads only relevant chunks. Local Retrieval: uses title, description, and tag matching without a router call. Full-text Compatibility: sends every bound document in full, intended only for migration or troubleshooting. Off: sends no knowledge to the answer model.', 'wp-aigent'); ?></div></div>
+            <div class="ai-chatbot-field"><label for="chatbot_knowledge_route_failure_mode"><?php esc_html_e('Router Failure', 'wp-aigent'); ?></label><select id="chatbot_knowledge_route_failure_mode" name="chatbot_knowledge_route_failure_mode"><option value="local_fallback" <?php selected($meta['chatbot_knowledge_route_failure_mode'], 'local_fallback'); ?>><?php esc_html_e('Local Retrieval (Recommended)', 'wp-aigent'); ?></option><option value="full_text_legacy" <?php selected($meta['chatbot_knowledge_route_failure_mode'], 'full_text_legacy'); ?>><?php esc_html_e('Full-text Compatibility', 'wp-aigent'); ?></option><option value="off" <?php selected($meta['chatbot_knowledge_route_failure_mode'], 'off'); ?>><?php esc_html_e('Off', 'wp-aigent'); ?></option></select><div class="description"><?php esc_html_e('Used only when LLM Router cannot return usable documents. Local Retrieval keeps the answer fast and bounded. Full-text Compatibility loads all bound documents. Off answers without knowledge.', 'wp-aigent'); ?></div></div>
         </div>
         <h3><?php esc_html_e('Discovery & Context Budget', 'wp-aigent'); ?></h3>
         <div class="ai-chatbot-field-row">
-            <?php foreach (['chatbot_knowledge_catalog_budget' => ['Catalog Characters', 500, 8000], 'chatbot_knowledge_max_candidates' => ['Maximum Candidates', 1, 20], 'chatbot_knowledge_max_documents' => ['Maximum Documents', 1, 3], 'chatbot_knowledge_context_budget' => ['Knowledge Token Budget', 200, 16000], 'chatbot_knowledge_max_chunks_per_document' => ['Chunks per Document', 1, 5]] as $field => $details): ?>
-            <div class="ai-chatbot-field"><label for="<?php echo esc_attr($field); ?>"><?php echo esc_html__($details[0], 'wp-aigent'); ?></label><input type="number" id="<?php echo esc_attr($field); ?>" name="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr($meta[$field]); ?>" min="<?php echo $details[1]; ?>" max="<?php echo $details[2]; ?>" /></div>
+            <?php foreach (['chatbot_knowledge_catalog_budget' => ['Catalog Characters', 500, 8000, 'Maximum characters sent to the router as document titles, descriptions, and tags.'], 'chatbot_knowledge_max_candidates' => ['Maximum Candidates', 1, 20, 'Limits how many likely documents the router compares for one question.'], 'chatbot_knowledge_max_documents' => ['Maximum Documents', 1, 3, 'Maximum documents the router may choose for one answer.'], 'chatbot_knowledge_context_budget' => ['Knowledge Token Budget', 200, 16000, 'Caps the retrieved knowledge supplied to the final answer model.'], 'chatbot_knowledge_max_chunks_per_document' => ['Chunks per Document', 1, 5, 'Prevents one long document from consuming the entire knowledge budget.']] as $field => $details): ?>
+            <div class="ai-chatbot-field"><label for="<?php echo esc_attr($field); ?>"><?php echo esc_html__($details[0], 'wp-aigent'); ?></label><input type="number" id="<?php echo esc_attr($field); ?>" name="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr($meta[$field]); ?>" min="<?php echo $details[1]; ?>" max="<?php echo $details[2]; ?>" /><div class="description"><?php echo esc_html__($details[3], 'wp-aigent'); ?></div></div>
             <?php endforeach; ?>
         </div>
         <div class="ai-chatbot-field">

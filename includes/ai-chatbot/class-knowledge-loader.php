@@ -4,7 +4,7 @@ defined('ABSPATH') || exit;
 /** Coordinates independent discovery, routing and retrieval services. */
 class AI_Chatbot_Knowledge_Loader {
     public function load(int $chatbot_id, array $config, string $question): array {
-        $mode = $config['chatbot_knowledge_mode'] ?? 'local';
+        $mode = $config['chatbot_knowledge_mode'] ?? 'llm_router';
         $trace = ['mode' => $mode, 'status' => 'disabled', 'candidates' => [], 'document_ids' => [], 'sources' => [], 'router' => []];
         if ($mode === 'off' || empty($config['chatbot_knowledge_ids'])) return ['context' => '', 'trace' => $trace];
         if ($mode === 'full_text_legacy') {
@@ -22,7 +22,17 @@ class AI_Chatbot_Knowledge_Loader {
                 $call = $route['call'] ?? [];
                 $trace['router'] = ['status' => $route['status'] ?? 'unknown', 'document_ids' => $route['document_ids'] ?? [], 'confidence' => $route['confidence'] ?? 0, 'model' => $call['model'] ?? '', 'duration_ms' => $call['duration_ms'] ?? 0];
                 $ids = $route['document_ids'] ?? [];
-                if (!$ids && ($config['chatbot_knowledge_route_failure_mode'] ?? 'local_fallback') !== 'local_fallback') return ['context' => '', 'trace' => $trace];
+                if (!$ids) {
+                    $failure_mode = $config['chatbot_knowledge_route_failure_mode'] ?? 'local_fallback';
+                    if ($failure_mode === 'full_text_legacy') {
+                        $trace['status'] = 'full_text_fallback';
+                        return ['context' => $this->load_full_context($chatbot_id), 'trace' => $trace];
+                    }
+                    if ($failure_mode === 'off') {
+                        $trace['status'] = 'knowledge_disabled_after_router';
+                        return ['context' => '', 'trace' => $trace];
+                    }
+                }
                 $trace['status'] = $ids ? 'routed' : 'local_fallback';
             } else {
                 $trace['router'] = ['status' => 'not_configured'];
@@ -54,10 +64,9 @@ class AI_Chatbot_Knowledge_Loader {
     }
 
     private function router_options(array $config): array {
-        $provider_id = (int) ($config['chatbot_knowledge_router_provider_id'] ?: $config['chatbot_primary_api_provider_id']);
+        $provider_id = (int) ($config['chatbot_knowledge_router_provider_id'] ?? 0);
         $connection = AI_Chatbot_CPT_Provider::get_connection_config($provider_id);
-        $model = (string) ($config['chatbot_knowledge_router_model'] ?: $config['chatbot_primary_api_model']);
-        $fallback_provider_id = (int) ($config['chatbot_knowledge_router_fallback_provider_id'] ?? 0);
-        return ['config' => $connection, 'fallback_config' => $fallback_provider_id ? AI_Chatbot_CPT_Provider::get_connection_config($fallback_provider_id) : [], 'model' => $model, 'fallback_model' => (string) ($config['chatbot_knowledge_router_fallback_model'] ?? ''), 'max_tokens' => (int) $config['chatbot_knowledge_router_max_tokens'], 'timeout' => (int) $config['chatbot_knowledge_router_timeout'], 'max_documents' => (int) $config['chatbot_knowledge_max_documents']];
+        $model = (string) ($config['chatbot_knowledge_router_model'] ?? '');
+        return ['config' => $connection, 'fallback_config' => [], 'model' => $model, 'fallback_model' => '', 'max_tokens' => (int) $config['chatbot_knowledge_router_max_tokens'], 'timeout' => (int) $config['chatbot_knowledge_router_timeout'], 'max_documents' => (int) $config['chatbot_knowledge_max_documents']];
     }
 }
