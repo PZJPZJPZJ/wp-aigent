@@ -376,6 +376,20 @@
 .ai-conv-msg-assistant {
     background: #fff;
 }
+.ai-conv-msg-knowledge td {
+    background: #f0f6fc;
+    color: #50575e;
+}
+.ai-conv-msg-knowledge .ai-conv-msg-label {
+    color: #3858e9;
+}
+.ai-chatbot-readonly-value {
+    padding: 8px 10px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #f6f7f7;
+    white-space: pre-wrap;
+}
 .ai-conv-msg-label {
     font-weight: 600;
     font-size: 11px;

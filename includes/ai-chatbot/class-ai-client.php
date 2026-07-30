@@ -10,21 +10,42 @@ class AI_Chatbot_AI_Client {
         $this->fallback_config = $fallback_config;
     }
 
-    /** Send a request, retrying once through the independently configured fallback. */
-    public function chat(array $messages): array {
-        $used_model = $this->config['api_model'] ?? '';
-        $result = $this->send_chat($messages, $this->config);
+    /**
+     * Send a request, retrying once through the independently configured fallback.
+     * Request options deliberately belong to the caller's use case, not to a
+     * provider connection. This lets knowledge processing reuse connections.
+     */
+    public function chat(array $messages, array $request_options = []): array {
+        $primary = array_merge($this->config, array_intersect_key($request_options, array_flip([
+            'api_model', 'api_reasoning_effort', 'api_output_tokens', 'api_timeout'
+        ])));
+        $fallback = $this->fallback_config;
+        if (!empty($fallback)) {
+            $fallback = array_merge($fallback, array_intersect_key($request_options, array_flip([
+                'fallback_model', 'fallback_reasoning_effort', 'fallback_output_tokens', 'api_timeout'
+            ])));
+            if (isset($fallback['fallback_model'])) {
+                $fallback['api_model'] = $fallback['fallback_model'];
+                unset($fallback['fallback_model']);
+            }
+        }
 
-        if (isset($result['error']) && !empty($this->fallback_config['api_model'])) {
+        $started = microtime(true);
+        $used_model = $primary['api_model'] ?? '';
+        $result = $this->send_chat($messages, $primary);
+
+        if (isset($result['error']) && !empty($fallback['api_model'])) {
             $primary_error = $result['error'];
-            $used_model = $this->fallback_config['api_model'];
-            $result = $this->send_chat($messages, $this->fallback_config);
+            $used_model = $fallback['api_model'];
+            $result = $this->send_chat($messages, $fallback);
             if (isset($result['error'])) {
                 $result['error'] = "{$primary_error} | fallback {$used_model} also failed: {$result['error']}";
             }
         }
 
         $result['model'] = $used_model;
+        $result['purpose'] = sanitize_key((string) ($request_options['purpose'] ?? 'answer'));
+        $result['duration_ms'] = (int) round((microtime(true) - $started) * 1000);
         return $result;
     }
 
@@ -44,7 +65,7 @@ class AI_Chatbot_AI_Client {
             'max_completion_tokens' => $this->output_tokens($config),
         ];
         if (($effort = $this->reasoning_effort($config)) !== '') $body['reasoning_effort'] = $effort;
-        $data = $this->post_json($this->api_url($config, '/chat/completions'), $body, $this->bearer_headers($config), 'OpenAI Chat Completions');
+        $data = $this->post_json($this->api_url($config, '/chat/completions'), $body, $this->bearer_headers($config), 'OpenAI Chat Completions', $this->timeout($config));
         if (isset($data['error'])) return $data;
         $content = $data['data']['choices'][0]['message']['content'] ?? '';
         return is_string($content) && $content !== '' ? ['content' => $content, 'raw' => $data['data']] : $this->response_error('OpenAI Chat Completions');
@@ -55,7 +76,7 @@ class AI_Chatbot_AI_Client {
             return ['role' => $message['role'] ?? 'user', 'content' => $message['content'] ?? ''];
         }, $messages)];
         if (($effort = $this->reasoning_effort($config)) !== '') $body['reasoning'] = ['effort' => $effort];
-        $data = $this->post_json($this->api_url($config, '/responses'), $body, $this->bearer_headers($config), 'OpenAI Responses');
+        $data = $this->post_json($this->api_url($config, '/responses'), $body, $this->bearer_headers($config), 'OpenAI Responses', $this->timeout($config));
         if (isset($data['error'])) return $data;
         $content = $data['data']['output_text'] ?? $this->extract_openai_response_text($data['data']['output'] ?? []);
         return is_string($content) && $content !== '' ? ['content' => $content, 'raw' => $data['data']] : $this->response_error('OpenAI Responses');
@@ -78,7 +99,7 @@ class AI_Chatbot_AI_Client {
             $body['output_config'] = ['effort' => $effort];
         }
         $headers = ['Content-Type' => 'application/json', 'x-api-key' => $config['api_key'] ?? '', 'anthropic-version' => '2023-06-01'];
-        $data = $this->post_json($this->api_url($config, '/messages'), $body, $headers, 'Anthropic Messages');
+        $data = $this->post_json($this->api_url($config, '/messages'), $body, $headers, 'Anthropic Messages', $this->timeout($config));
         if (isset($data['error'])) return $data;
         $content = '';
         foreach (($data['data']['content'] ?? []) as $part) {
@@ -109,7 +130,7 @@ class AI_Chatbot_AI_Client {
 
         $model = preg_replace('#^models/#', '', (string) ($config['api_model'] ?? ''));
         $headers = ['Content-Type' => 'application/json', 'x-goog-api-key' => $config['api_key'] ?? ''];
-        $data = $this->post_json($this->api_url($config, '/models/' . rawurlencode($model) . ':generateContent'), $body, $headers, 'Gemini Generate Content');
+        $data = $this->post_json($this->api_url($config, '/models/' . rawurlencode($model) . ':generateContent'), $body, $headers, 'Gemini Generate Content', $this->timeout($config));
         if (isset($data['error'])) return $data;
         $content = '';
         foreach (($data['data']['candidates'][0]['content']['parts'] ?? []) as $part) {
@@ -170,6 +191,10 @@ class AI_Chatbot_AI_Client {
         return min(128000, max(1, absint($config['api_output_tokens'] ?? 4096)));
     }
 
+    private function timeout(array $config): int {
+        return min(120, max(1, absint($config['api_timeout'] ?? 60)));
+    }
+
     private function api_url(array $config, string $path): string {
         return rtrim((string) ($config['api_base_url'] ?? ''), '/') . $path;
     }
@@ -178,8 +203,8 @@ class AI_Chatbot_AI_Client {
         return ['Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . ($config['api_key'] ?? '')];
     }
 
-    private function post_json(string $url, array $body, array $headers, string $service): array {
-        return $this->parse_response(wp_remote_post($url, ['headers' => $headers, 'body' => wp_json_encode($body), 'timeout' => 60]), $service);
+    private function post_json(string $url, array $body, array $headers, string $service, int $timeout = 60): array {
+        return $this->parse_response(wp_remote_post($url, ['headers' => $headers, 'body' => wp_json_encode($body), 'timeout' => $timeout]), $service);
     }
 
     private function get_json(string $url, array $headers): array {

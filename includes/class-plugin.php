@@ -27,6 +27,11 @@ class WP_AIGent_Plugin {
 
         // Core engine
         require_once $includes . 'ai-chatbot/class-ai-client.php';
+        require_once $includes . 'ai-chatbot/class-knowledge-indexer.php';
+        require_once $includes . 'ai-chatbot/class-knowledge-card-service.php';
+        require_once $includes . 'ai-chatbot/class-knowledge-catalog.php';
+        require_once $includes . 'ai-chatbot/class-knowledge-router.php';
+        require_once $includes . 'ai-chatbot/class-knowledge-retriever.php';
         require_once $includes . 'ai-chatbot/class-knowledge-loader.php';
         require_once $includes . 'ai-chatbot/class-memory-manager.php';
         require_once $includes . 'ai-chatbot/class-lead-processor.php';
@@ -57,6 +62,7 @@ class WP_AIGent_Plugin {
     }
 
     private function register_hooks(): void {
+        AI_Chatbot_Knowledge_Indexer::maybe_install();
         add_action('init', [$this, 'register_cpts']);
         add_action('init', [$this, 'register_widget']);
         add_action('rest_api_init', [$this, 'register_api_routes']);
@@ -149,6 +155,42 @@ class WP_AIGent_Plugin {
                 'preview_nonce' => wp_create_nonce('ai_chatbot_preview'),
                 'providerModels'   => $provider_models,
             ]);
+        } elseif ($screen->post_type === 'ai_knowledge' && $screen->base === 'post') {
+            wp_enqueue_script(
+                'ai-chatbot-admin',
+                WP_AIGENT_URL . 'assets/ai-chatbot/js/admin.js',
+                ['jquery'],
+                self::asset_version('assets/ai-chatbot/js/admin.js'),
+                true
+            );
+            $provider_models = [];
+            $providers = get_posts([
+                'post_type' => 'ai_provider', 'post_status' => 'publish',
+                'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true,
+            ]);
+            foreach ($providers as $provider_id) {
+                $provider_meta = AI_Chatbot_CPT_Provider::get_meta((int) $provider_id);
+                $provider_models[$provider_id] = is_array($provider_meta['api_provider_model_list'] ?? null) ? $provider_meta['api_provider_model_list'] : [];
+            }
+            wp_localize_script('ai-chatbot-admin', 'aiChatbotAdmin', ['providerModels' => $provider_models]);
+        } elseif ($screen->post_type === 'ai_knowledge' && $screen->base === 'post') {
+            wp_enqueue_script(
+                'ai-chatbot-admin',
+                WP_AIGENT_URL . 'assets/ai-chatbot/js/admin.js',
+                ['jquery'],
+                self::asset_version('assets/ai-chatbot/js/admin.js'),
+                true
+            );
+            $provider_models = [];
+            $providers = get_posts([
+                'post_type' => 'ai_provider', 'post_status' => 'publish',
+                'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true,
+            ]);
+            foreach ($providers as $provider_id) {
+                $provider_meta = AI_Chatbot_CPT_Provider::get_meta((int) $provider_id);
+                $provider_models[$provider_id] = is_array($provider_meta['api_provider_model_list'] ?? null) ? $provider_meta['api_provider_model_list'] : [];
+            }
+            wp_localize_script('ai-chatbot-admin', 'aiChatbotAdmin', ['providerModels' => $provider_models]);
         } elseif ($screen->post_type === 'ai_provider' && $screen->base === 'post') {
             wp_enqueue_script(
                 'ai-provider-admin',

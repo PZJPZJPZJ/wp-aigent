@@ -17,9 +17,11 @@ class WP_AIGent_Installer {
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-chatbot.php';
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-knowledge.php';
         require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-cpt-conversation.php';
+        require_once WP_AIGENT_PATH . 'includes/ai-chatbot/class-knowledge-indexer.php';
         AI_Chatbot_CPT_Provider::register();
         AI_Chatbot_CPT_Chatbot::register();
         AI_Chatbot_CPT_Knowledge::register();
         AI_Chatbot_CPT_Conversation::register();
+        AI_Chatbot_Knowledge_Indexer::install();
     }
 }

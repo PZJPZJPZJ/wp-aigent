@@ -68,6 +68,20 @@ defined('ABSPATH') || exit;
             echo '<table class="ai-conv-msg-table widefat">';
             foreach ($messages as $msg) {
                 $role = $msg['role'];
+                if ($role === 'knowledge') {
+                    $trace = (array) ($msg['trace'] ?? []);
+                    $candidate_labels = array_map(static fn($item) => '#' . ($item['id'] ?? '?') . ' ' . ($item['title'] ?? ''), (array) ($trace['candidates'] ?? []));
+                    $source_labels = array_map(static fn($item) => ($item['id'] ?? '') . ' ' . ($item['title'] ?? ''), (array) ($trace['sources'] ?? []));
+                    echo '<tr class="ai-conv-msg-knowledge">';
+                    echo '<td class="ai-conv-msg-label">' . esc_html__('Knowledge', 'wp-aigent') . '</td>';
+                    echo '<td class="ai-conv-msg-content"><strong>' . esc_html__('Knowledge call', 'wp-aigent') . '</strong>';
+                    echo '<div class="ai-conv-msg-info">' . esc_html(sprintf(__('Mode: %1$s | Result: %2$s | Documents: %3$s | Estimated tokens: %4$s', 'wp-aigent'), $trace['mode'] ?? '—', $trace['status'] ?? '—', implode(', ', (array) ($trace['document_ids'] ?? [])) ?: '—', $trace['token_estimate'] ?? 0)) . '</div>';
+                    if ($candidate_labels) echo '<div class="ai-conv-msg-info">' . esc_html__('Candidates:', 'wp-aigent') . ' ' . esc_html(implode(' | ', $candidate_labels)) . '</div>';
+                    if (!empty($trace['router'])) echo '<div class="ai-conv-msg-info">' . esc_html(sprintf(__('Router: %1$s | Model: %2$s | %3$d ms', 'wp-aigent'), $trace['router']['status'] ?? '—', $trace['router']['model'] ?? '—', (int) ($trace['router']['duration_ms'] ?? 0))) . '</div>';
+                    if ($source_labels) echo '<div class="ai-conv-msg-info">' . esc_html__('Injected sources:', 'wp-aigent') . ' ' . esc_html(implode(' | ', $source_labels)) . '</div>';
+                    echo '</td></tr>';
+                    continue;
+                }
                 $css_class = 'ai-conv-msg-' . $role;
                 $label = ($role === 'user') ? __('User', 'wp-aigent') : __('Assistant', 'wp-aigent');
 

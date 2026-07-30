@@ -143,11 +143,25 @@
             {
                 provider: $('#chatbot_fallback_api_provider_id'),
                 select: $('#chatbot_fallback_api_model')
+            },
+            {
+                provider: $('#chatbot_knowledge_router_provider_id'),
+                inheritProvider: $('#chatbot_primary_api_provider_id'),
+                select: $('#chatbot_knowledge_router_model')
+            },
+            {
+                provider: $('#chatbot_knowledge_router_fallback_provider_id'),
+                select: $('#chatbot_knowledge_router_fallback_model')
+            },
+            {
+                provider: $('#knowledge_metadata_provider_id'),
+                select: $('#knowledge_metadata_model')
             }
         ];
 
         function populateModelSelect(control) {
-            var models = (config.providerModels && config.providerModels[control.provider.val()]) || [];
+            var providerId = control.provider.val() || (control.inheritProvider && control.inheritProvider.val());
+            var models = (config.providerModels && config.providerModels[providerId]) || [];
             var currentModel = control.select.val();
 
             control.select.find('option:not([value=""])').remove();
@@ -166,6 +180,11 @@
             control.provider.on('change', function() {
                 populateModelSelect(control);
             });
+            if (control.inheritProvider) {
+                control.inheritProvider.on('change', function() {
+                    if (!control.provider.val()) populateModelSelect(control);
+                });
+            }
         });
 
         // ===== Inactivity Timeout: Enable/Disable =====

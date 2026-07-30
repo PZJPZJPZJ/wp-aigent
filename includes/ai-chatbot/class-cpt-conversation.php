@@ -71,6 +71,9 @@ class AI_Chatbot_CPT_Conversation {
             foreach ($exchanges as $ex) {
                 $msg_time = $ex['time'] ?? '';
                 $messages[] = ['role' => 'user', 'content' => $ex['user'], 'time' => $msg_time];
+                if (!empty($ex['knowledge_trace'])) {
+                    $messages[] = ['role' => 'knowledge', 'trace' => $ex['knowledge_trace'], 'time' => $msg_time];
+                }
                 if (!empty($ex['error'])) {
                     $messages[] = [
                         'role'  => 'assistant',
