@@ -79,11 +79,12 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
         // country from an uncached REST endpoint and update the select.
         $selected_country = $default_country;
         $countries = WP_AIGent_Country_Resolver::country_options();
+        $input_size = !empty($item['input_size']) ? sanitize_html_class((string) $item['input_size']) : 'sm';
 
         $form->add_render_attribute('wp-aigent-country-code-' . $item_index, [
-            'name'                    => $field_name,
-            'id'                      => $field_dom_id,
-            'class'                   => 'elementor-field-textual elementor-field',
+            'name'                         => $field_name,
+            'id'                           => $field_dom_id,
+            'class'                        => 'elementor-field-textual elementor-size-' . $input_size,
             'data-wp-aigent-country-code' => '1',
             'data-use-cf-ipcountry'       => $use_cloudflare_country ? '1' : '0',
             'data-default-country'        => $default_country,
@@ -98,6 +99,12 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
             $form->add_render_attribute('wp-aigent-country-code-' . $item_index, 'aria-label', $item['field_label']);
         }
 
+        // Match Elementor's native Select field markup so its existing styles
+        // control the select dimensions and caret.
+        echo '<div class="elementor-field elementor-select-wrapper remove-before">';
+        echo '<div class="select-caret-down-wrapper">';
+        echo '<svg aria-hidden="true" class="e-font-icon-svg e-eicon-caret-down" viewBox="0 0 571.4 571.4" xmlns="http://www.w3.org/2000/svg"><path d="M571 393Q571 407 561 418L311 668Q300 679 286 679T261 668L11 418Q0 407 0 393T11 368 36 357H536Q550 357 561 368T571 393Z"></path></svg>';
+        echo '</div>';
         echo '<select ' . $form->get_render_attribute_string('wp-aigent-country-code-' . $item_index) . '>';
         foreach ($countries as $country_code => $country) {
             $dial = $country['dial'] ?? '';
@@ -113,6 +120,7 @@ class WP_AIGent_Elementor_Country_Code_Field extends \ElementorPro\Modules\Forms
             );
         }
         echo '</select>';
+        echo '</div>';
     }
 
     public function validation($field, $record, $ajax_handler) {
