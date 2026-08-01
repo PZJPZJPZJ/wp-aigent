@@ -193,51 +193,6 @@ defined('ABSPATH') || exit;
     </div>
     <?php endif; ?>
 
-    <!-- Previous Conversations (same visitor) -->
-    <div class="ai-conv-section">
-        <h3><?php esc_html_e('Previous Conversations (same visitor)', 'wp-aigent'); ?></h3>
-        <?php
-        $history_convs = get_posts([
-            'post_type'      => 'ai_conversation',
-            'meta_key'       => 'conversation_session_id',
-            'meta_value'     => $session_id,
-            'post__not_in'   => [$post->ID],
-            'posts_per_page' => 20,
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-        ]);
-
-        if (!empty($history_convs)):
-        ?>
-        <table class="widefat striped">
-            <thead><tr>
-                <th><?php esc_html_e('Conversation', 'wp-aigent'); ?></th>
-                <th><?php esc_html_e('Messages', 'wp-aigent'); ?></th>
-                <th><?php esc_html_e('Started', 'wp-aigent'); ?></th>
-                <th><?php esc_html_e('Notifications', 'wp-aigent'); ?></th>
-            </tr></thead>
-            <tbody>
-                <?php foreach ($history_convs as $conv):
-                    $conv_url  = admin_url('post.php?post=' . $conv->ID . '&action=edit');
-                    $started   = get_post_meta($conv->ID, 'conversation_started_at', true);
-                    $msg_cnt   = (int) get_post_meta($conv->ID, 'conversation_message_count', true);
-                    $log       = get_post_meta($conv->ID, 'conversation_notification_log', true);
-                    $notif_cnt = is_array($log) ? count($log) : 0;
-                ?>
-                <tr>
-                    <td><a href="<?php echo esc_url($conv_url); ?>" target="_blank">#<?php echo $conv->ID; ?></a></td>
-                    <td><?php echo $msg_cnt; ?></td>
-                    <td><?php echo esc_html($started ?: '—'); ?></td>
-                    <td><?php echo $notif_cnt; ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php else: ?>
-        <p style="color:#999;"><?php esc_html_e('This user has no other conversations.', 'wp-aigent'); ?></p>
-        <?php endif; ?>
-    </div>
-
     <!-- Notification History -->
     <div class="ai-conv-section">
         <h3><?php esc_html_e('Notification History', 'wp-aigent'); ?></h3>

@@ -280,7 +280,7 @@ foreach ($providers as $provider) {
         </div>
         <h3><?php esc_html_e('Document Discovery', 'wp-aigent'); ?></h3>
         <div class="ai-chatbot-field-row">
-            <?php foreach (['chatbot_knowledge_catalog_budget' => ['Catalog Characters', 500, 8000, 'Maximum characters sent to the router as document titles, descriptions, and tags.'], 'chatbot_knowledge_max_candidates' => ['Maximum Candidates', 1, 20, 'Limits how many likely documents the router compares for one question.'], 'chatbot_knowledge_max_documents' => ['Maximum Documents', 1, 3, 'Each selected document is sent in full. Keep this low enough for your answer model’s context window.']] as $field => $details): ?>
+            <?php foreach (['chatbot_knowledge_catalog_budget' => ['Catalog Characters', 500, 8000, 'Maximum characters used for document discovery and sent to the Router when enabled.'], 'chatbot_knowledge_max_candidates' => ['Maximum Candidates', 1, 20, 'Limits how many likely documents the Router or Local Retrieval compares for one question.'], 'chatbot_knowledge_min_documents' => ['Minimum Documents', 0, 8, '0 lets the Router return no match. A value above 0 asks it to select at least this many likely documents; local ranking fills any shortfall.'], 'chatbot_knowledge_max_documents' => ['Maximum Documents', 1, 8, 'Caps selected documents. Each one is sent in full, so keep this within your answer model’s context window.']] as $field => $details): ?>
             <div class="ai-chatbot-field"><label for="<?php echo esc_attr($field); ?>"><?php echo esc_html__($details[0], 'wp-aigent'); ?></label><input type="number" id="<?php echo esc_attr($field); ?>" name="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr($meta[$field]); ?>" min="<?php echo $details[1]; ?>" max="<?php echo $details[2]; ?>" /><div class="description"><?php echo esc_html__($details[3], 'wp-aigent'); ?></div></div>
             <?php endforeach; ?>
         </div>
@@ -297,16 +297,15 @@ foreach ($providers as $provider) {
                 }
                 ?>
             </div>
-            <div class="ai-chatbot-checkbox-list" style="border:1px solid #e0e0e0;border-radius:4px;padding:4px 0;max-height:320px;overflow-y:auto;">
+            <div class="ai-chatbot-knowledge-documents">
                 <?php
                 if (empty($docs)) {
-                    echo '<div style="padding:16px;text-align:center;color:#999;">' . esc_html__('No knowledge documents yet. Create one under Knowledge Base.', 'wp-aigent') . '</div>';
+                    echo '<div class="ai-chatbot-knowledge-documents-empty">' . esc_html__('No knowledge documents yet. Create one under Knowledge Base.', 'wp-aigent') . '</div>';
                 }
                 foreach ($docs as $doc) {
-                    echo '<label class="ai-chatbot-checkbox-item" style="display:flex;align-items:center;padding:6px 10px;margin:2px 4px;border-radius:3px;cursor:pointer;transition:background 0.1s;">';
-                    echo '<input type="checkbox" name="chatbot_knowledge_ids[]" value="' . esc_attr($doc->ID) . '" ' . checked(in_array($doc->ID, $selected_ids), true, false) . ' style="margin-right:8px;">';
+                    echo '<label class="ai-chatbot-knowledge-document">';
                     $card = (new AI_Chatbot_Knowledge_Card_Service())->get_card($doc->ID);
-                    echo '<span><strong>' . esc_html($doc->post_title) . '</strong><br><small>' . esc_html($card['description']) . ' · ' . esc_html($card['status']) . '</small></span>';
+                    echo '<span class="ai-chatbot-knowledge-document-content"><span class="ai-chatbot-knowledge-document-title"><input type="checkbox" name="chatbot_knowledge_ids[]" value="' . esc_attr($doc->ID) . '" ' . checked(in_array($doc->ID, $selected_ids), true, false) . '><strong>' . esc_html($doc->post_title) . '</strong></span><small>' . esc_html($card['description']) . ' · ' . esc_html($card['status']) . '</small></span>';
                     echo '</label>';
                 }
                 ?>

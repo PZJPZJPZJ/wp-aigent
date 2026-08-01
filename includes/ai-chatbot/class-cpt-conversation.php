@@ -26,6 +26,8 @@ class AI_Chatbot_CPT_Conversation {
         add_action('save_post_ai_conversation', [self::class, 'prevent_manual_edit'], 10, 3);
         add_action('admin_head-post.php', [self::class, 'hide_submit_meta_box']);
         add_action('admin_head-post-new.php', [self::class, 'hide_submit_meta_box']);
+        add_action('restrict_manage_posts', [self::class, 'render_list_filters'], 10, 2);
+        add_action('pre_get_posts', [self::class, 'filter_list_query']);
 
         // Clear pending inactivity cron when a conversation is deleted or trashed
         add_action('before_delete_post', [self::class, 'cleanup_inactivity_cron']);
@@ -37,6 +39,36 @@ class AI_Chatbot_CPT_Conversation {
         if ($screen && $screen->post_type === 'ai_conversation') {
             remove_meta_box('submitdiv', 'ai_conversation', 'side');
         }
+    }
+
+    /** Render the standard WordPress list-table filter for one visitor session. */
+    public static function render_list_filters(string $post_type, string $which): void {
+        if ($post_type !== 'ai_conversation' || $which !== 'top') return;
+        $value = isset($_GET['ai_conversation_visitor']) && is_scalar($_GET['ai_conversation_visitor'])
+            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor']))
+            : '';
+        echo '<label class="screen-reader-text" for="ai-conversation-visitor-filter">' . esc_html__('Visitor Session', 'wp-aigent') . '</label>';
+        echo '<input type="search" id="ai-conversation-visitor-filter" name="ai_conversation_visitor" value="' . esc_attr($value) . '" placeholder="' . esc_attr__('Visitor Session', 'wp-aigent') . '" />';
+    }
+
+    /** Apply the Visitor Session filter to the Conversations list table only. */
+    public static function filter_list_query(WP_Query $query): void {
+        if (!is_admin() || !$query->is_main_query() || $query->get('post_type') !== 'ai_conversation') return;
+        $session_id = isset($_GET['ai_conversation_visitor']) && is_scalar($_GET['ai_conversation_visitor'])
+            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor']))
+            : '';
+        if ($session_id === '') return;
+        $meta_query = (array) $query->get('meta_query');
+        $meta_query[] = ['key' => 'conversation_session_id', 'value' => $session_id, 'compare' => '='];
+        $query->set('meta_query', $meta_query);
+    }
+
+    /** Builds a list-table URL scoped to a single visitor session. */
+    public static function list_filter_url(string $session_id): string {
+        return add_query_arg([
+            'post_type' => 'ai_conversation',
+            'ai_conversation_visitor' => $session_id,
+        ], admin_url('edit.php'));
     }
 
     public static function add_meta_boxes(): void {

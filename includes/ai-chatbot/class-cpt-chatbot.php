@@ -79,6 +79,7 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_router_timeout',
             'chatbot_knowledge_catalog_budget',
             'chatbot_knowledge_max_candidates',
+            'chatbot_knowledge_min_documents',
             'chatbot_knowledge_max_documents',
             'chatbot_knowledge_route_failure_mode',
             'chatbot_max_history',
@@ -153,7 +154,11 @@ class AI_Chatbot_CPT_Chatbot {
                     $value = absint($value);
                 } elseif (in_array($field, ['chatbot_primary_reasoning_effort', 'chatbot_fallback_reasoning_effort'], true)) {
                     $value = in_array($value, ['off', 'low', 'medium', 'high', 'xhigh'], true) ? $value : 'off';
-                } elseif (in_array($field, ['chatbot_primary_output_tokens', 'chatbot_fallback_output_tokens', 'chatbot_knowledge_router_max_tokens', 'chatbot_knowledge_router_timeout', 'chatbot_knowledge_catalog_budget', 'chatbot_knowledge_max_candidates', 'chatbot_knowledge_max_documents'], true)) {
+                } elseif ($field === 'chatbot_knowledge_min_documents') {
+                    $value = min(8, max(0, absint($value)));
+                } elseif ($field === 'chatbot_knowledge_max_documents') {
+                    $value = min(8, max(1, absint($value)));
+                } elseif (in_array($field, ['chatbot_primary_output_tokens', 'chatbot_fallback_output_tokens', 'chatbot_knowledge_router_max_tokens', 'chatbot_knowledge_router_timeout', 'chatbot_knowledge_catalog_budget', 'chatbot_knowledge_max_candidates'], true)) {
                     $value = min(128000, max(1, absint($value)));
                 } elseif ($field === 'chatbot_knowledge_mode') {
                     $value = in_array($value, ['llm_router', 'local', 'full_text_legacy', 'off'], true) ? $value : 'local';
@@ -225,7 +230,8 @@ class AI_Chatbot_CPT_Chatbot {
             'chatbot_knowledge_router_timeout' => '10',
             'chatbot_knowledge_catalog_budget' => '4000',
             'chatbot_knowledge_max_candidates' => '12',
-            'chatbot_knowledge_max_documents' => '3',
+            'chatbot_knowledge_min_documents' => '0',
+            'chatbot_knowledge_max_documents' => '8',
             'chatbot_knowledge_route_failure_mode' => 'local_fallback',
             'chatbot_max_history'      => '10',
             'chatbot_session_ttl'      => '168',

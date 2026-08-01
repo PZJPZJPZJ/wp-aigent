@@ -12,6 +12,7 @@ class AI_Chatbot_Knowledge_Loader {
             $trace['status'] = $context === '' ? 'no_match' : 'legacy';
             return ['context' => $context, 'trace' => $trace];
         }
+        $limits = $this->document_limits($config);
         $candidates = (new AI_Chatbot_Knowledge_Catalog())->candidates($chatbot_id, $question, (int) $config['chatbot_knowledge_max_candidates'], (int) $config['chatbot_knowledge_catalog_budget']);
         $trace['candidates'] = array_map(static fn($card) => ['id' => $card['id'], 'title' => $card['title'], 'score' => $card['score']], $candidates);
         $ids = [];
@@ -29,6 +30,7 @@ class AI_Chatbot_Knowledge_Loader {
                     'token_usage' => AI_Chatbot_Token_Usage::normalize((array) ($call['raw']['usage'] ?? [])),
                 ];
                 $ids = $route['document_ids'] ?? [];
+                if ($ids) $ids = $this->fill_minimum_documents($ids, $candidates, $limits['min'], $limits['max']);
                 if (!$ids) {
                     $failure_mode = $config['chatbot_knowledge_route_failure_mode'] ?? 'local_fallback';
                     if ($failure_mode === 'full_text_legacy') {
@@ -47,7 +49,7 @@ class AI_Chatbot_Knowledge_Loader {
             }
         }
         if (!$ids) {
-            $ids = array_slice(array_map(static fn($card) => (int) $card['id'], $candidates), 0, (int) $config['chatbot_knowledge_max_documents']);
+            $ids = array_slice(array_map(static fn($card) => (int) $card['id'], $candidates), 0, $limits['max']);
             if ($mode === 'local') $trace['status'] = $ids ? 'local' : 'no_match';
         }
         $result = (new AI_Chatbot_Knowledge_Retriever())->retrieve($ids);
@@ -74,6 +76,24 @@ class AI_Chatbot_Knowledge_Loader {
         $provider_id = (int) ($config['chatbot_knowledge_router_provider_id'] ?? 0);
         $connection = AI_Chatbot_CPT_Provider::get_connection_config($provider_id);
         $model = (string) ($config['chatbot_knowledge_router_model'] ?? '');
-        return ['config' => $connection, 'fallback_config' => [], 'model' => $model, 'fallback_model' => '', 'max_tokens' => (int) $config['chatbot_knowledge_router_max_tokens'], 'timeout' => (int) $config['chatbot_knowledge_router_timeout'], 'max_documents' => (int) $config['chatbot_knowledge_max_documents']];
+        $limits = $this->document_limits($config);
+        return ['config' => $connection, 'fallback_config' => [], 'model' => $model, 'fallback_model' => '', 'max_tokens' => (int) $config['chatbot_knowledge_router_max_tokens'], 'timeout' => (int) $config['chatbot_knowledge_router_timeout'], 'min_documents' => $limits['min'], 'max_documents' => $limits['max']];
+    }
+
+    private function document_limits(array $config): array {
+        $max = min(8, max(1, absint($config['chatbot_knowledge_max_documents'] ?? 8)));
+        $min = min($max, max(0, absint($config['chatbot_knowledge_min_documents'] ?? 0)));
+        return ['min' => $min, 'max' => $max];
+    }
+
+    private function fill_minimum_documents(array $document_ids, array $candidates, int $minimum, int $maximum): array {
+        $ids = array_values(array_unique(array_filter(array_map('absint', $document_ids))));
+        if ($minimum <= 0 || count($ids) >= $minimum) return array_slice($ids, 0, $maximum);
+        foreach ($candidates as $candidate) {
+            $id = absint($candidate['id'] ?? 0);
+            if ($id && !in_array($id, $ids, true)) $ids[] = $id;
+            if (count($ids) >= $minimum || count($ids) >= $maximum) break;
+        }
+        return array_slice($ids, 0, $maximum);
     }
 }
