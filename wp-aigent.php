@@ -18,12 +18,7 @@ define('WP_AIGENT_FILE', __FILE__);
 define('WP_AIGENT_PATH', plugin_dir_path(__FILE__));
 define('WP_AIGENT_URL', plugin_dir_url(__FILE__));
 
-// Session secret — deferred to plugins_loaded so wp_salt() is guaranteed available
 add_action('plugins_loaded', function () {
-    if (!defined('AI_CHAT_SESSION_SECRET')) {
-        define('AI_CHAT_SESSION_SECRET', wp_salt('auth'));
-    }
-    // Encryption key for stored API keys — separate from session HMAC secret
     if (!defined('AI_CHAT_ENCRYPT_KEY')) {
         define('AI_CHAT_ENCRYPT_KEY', wp_salt('secure_auth'));
     }

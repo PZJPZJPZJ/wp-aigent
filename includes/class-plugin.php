@@ -19,6 +19,8 @@ class WP_AIGent_Plugin {
     private function load_dependencies(): void {
         $includes = WP_AIGENT_PATH . 'includes/';
 
+        require_once $includes . 'class-visitor-identity.php';
+
         // CPTs
         require_once $includes . 'ai-chatbot/class-cpt-provider.php';
         require_once $includes . 'ai-chatbot/class-cpt-chatbot.php';

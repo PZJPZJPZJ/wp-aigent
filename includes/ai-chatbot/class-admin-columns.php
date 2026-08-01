@@ -38,7 +38,7 @@ class AI_Chatbot_Admin_Columns {
     public function conversation_columns(array $columns): array {
         $columns['title']        = __('Conversation ID', 'wp-aigent');
         $columns['chatbot']      = __('Chatbot', 'wp-aigent');
-        $columns['visitor_session'] = __('Visitor Session', 'wp-aigent');
+        $columns['visitor_session'] = __('Visitor ID', 'wp-aigent');
         $columns['lead_score']   = __('Lead Score', 'wp-aigent');
         $columns['notification'] = __('Notification', 'wp-aigent');
         $columns['messages']     = __('Messages', 'wp-aigent');
@@ -62,12 +62,12 @@ class AI_Chatbot_Admin_Columns {
                 echo $lead ? esc_html($lead['lead_score'] ?? '—') : '—';
                 break;
             case 'visitor_session':
-                $session_id = (string) get_post_meta($post_id, 'conversation_session_id', true);
-                if ($session_id === '') {
+                $visitor_id = (string) get_post_meta($post_id, WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, true);
+                if ($visitor_id === '') {
                     echo '—';
                     break;
                 }
-                echo '<a href="' . esc_url(AI_Chatbot_CPT_Conversation::list_filter_url($session_id)) . '"><code>' . esc_html($session_id) . '</code></a>';
+                echo '<a href="' . esc_url(AI_Chatbot_CPT_Conversation::list_filter_url($visitor_id)) . '"><code>' . esc_html($visitor_id) . '</code></a>';
                 break;
             case 'notification':
                 $log = get_post_meta($post_id, 'conversation_notification_log', true);

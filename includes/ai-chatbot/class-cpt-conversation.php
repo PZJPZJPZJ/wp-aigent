@@ -41,33 +41,33 @@ class AI_Chatbot_CPT_Conversation {
         }
     }
 
-    /** Render the standard WordPress list-table filter for one visitor session. */
+    /** Render the standard WordPress list-table filter for one global visitor ID. */
     public static function render_list_filters(string $post_type, string $which): void {
         if ($post_type !== 'ai_conversation' || $which !== 'top') return;
-        $value = isset($_GET['ai_conversation_visitor']) && is_scalar($_GET['ai_conversation_visitor'])
-            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor']))
+        $value = isset($_GET['ai_conversation_visitor_id']) && is_scalar($_GET['ai_conversation_visitor_id'])
+            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor_id']))
             : '';
-        echo '<label class="screen-reader-text" for="ai-conversation-visitor-filter">' . esc_html__('Visitor Session', 'wp-aigent') . '</label>';
-        echo '<input type="search" id="ai-conversation-visitor-filter" name="ai_conversation_visitor" value="' . esc_attr($value) . '" placeholder="' . esc_attr__('Visitor Session', 'wp-aigent') . '" />';
+        echo '<label class="screen-reader-text" for="ai-conversation-visitor-filter">' . esc_html__('Visitor ID', 'wp-aigent') . '</label>';
+        echo '<input type="search" id="ai-conversation-visitor-filter" name="ai_conversation_visitor_id" value="' . esc_attr($value) . '" placeholder="' . esc_attr__('Visitor ID', 'wp-aigent') . '" />';
     }
 
-    /** Apply the Visitor Session filter to the Conversations list table only. */
+    /** Apply the global Visitor ID filter to the Conversations list table only. */
     public static function filter_list_query(WP_Query $query): void {
         if (!is_admin() || !$query->is_main_query() || $query->get('post_type') !== 'ai_conversation') return;
-        $session_id = isset($_GET['ai_conversation_visitor']) && is_scalar($_GET['ai_conversation_visitor'])
-            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor']))
+        $visitor_id = isset($_GET['ai_conversation_visitor_id']) && is_scalar($_GET['ai_conversation_visitor_id'])
+            ? sanitize_text_field(wp_unslash($_GET['ai_conversation_visitor_id']))
             : '';
-        if ($session_id === '') return;
+        if ($visitor_id === '') return;
         $meta_query = (array) $query->get('meta_query');
-        $meta_query[] = ['key' => 'conversation_session_id', 'value' => $session_id, 'compare' => '='];
+        $meta_query[] = ['key' => WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, 'value' => $visitor_id, 'compare' => '='];
         $query->set('meta_query', $meta_query);
     }
 
-    /** Builds a list-table URL scoped to a single visitor session. */
-    public static function list_filter_url(string $session_id): string {
+    /** Builds a list-table URL scoped to one global visitor ID. */
+    public static function list_filter_url(string $visitor_id): string {
         return add_query_arg([
             'post_type' => 'ai_conversation',
-            'ai_conversation_visitor' => $session_id,
+            'ai_conversation_visitor_id' => $visitor_id,
         ], admin_url('edit.php'));
     }
 
@@ -83,7 +83,7 @@ class AI_Chatbot_CPT_Conversation {
     }
 
     public static function render_meta_box($post): void {
-        $session_id   = get_post_meta($post->ID, 'conversation_session_id', true);
+        $visitor_id   = get_post_meta($post->ID, WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, true);
         $chatbot_id   = (int) get_post_meta($post->ID, 'conversation_chatbot_id', true);
         $msg_count    = (int) get_post_meta($post->ID, 'conversation_message_count', true);
         $started_at   = get_post_meta($post->ID, 'conversation_started_at', true);
@@ -144,20 +144,20 @@ class AI_Chatbot_CPT_Conversation {
         wp_clear_scheduled_hook('ai_chatbot_inactivity_notify', [$post_id]);
     }
 
-    public static function create(string $session_id, int $chatbot_id, array $visitor_data): int {
-        $title = $session_id;
+    public static function create(string $visitor_id, int $chatbot_id, array $visitor_data): int {
         $id = wp_insert_post([
-            'post_title'  => $title,
+            'post_title'  => __('Conversation', 'wp-aigent'),
             'post_type'   => 'ai_conversation',
             'post_status' => 'publish',
             'meta_input'  => [
-                'conversation_session_id'    => $session_id,
+                WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY => $visitor_id,
                 'conversation_chatbot_id'    => $chatbot_id,
                 'conversation_visitor_ip'    => $visitor_data['ip'] ?? '',
                 'conversation_visitor_ua'    => $visitor_data['ua'] ?? '',
                 'conversation_visitor_page_url'  => $visitor_data['page_url'] ?? '',
                 'conversation_message_count' => 0,
                 'conversation_started_at'    => current_time('mysql'),
+                'conversation_last_activity' => time(),
             ],
         ]);
 
@@ -165,13 +165,43 @@ class AI_Chatbot_CPT_Conversation {
             return 0;
         }
 
-        // Set title to "Session ID | #Conversation ID" for easy identification
+        // Conversation ID alone distinguishes records; visitor identity is stored separately.
         wp_update_post([
             'ID'         => $id,
-            'post_title' => $session_id . ' | #' . $id,
+            'post_title' => sprintf(__('Conversation #%d', 'wp-aigent'), $id),
         ]);
 
         return $id;
+    }
+
+    /** Returns the latest non-expired conversation for one visitor and chatbot. */
+    public static function find_active(string $visitor_id, int $chatbot_id, int $ttl_hours): ?int {
+        $existing = get_posts([
+            'post_type'      => 'ai_conversation',
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'meta_key'       => 'conversation_last_activity',
+            'orderby'        => 'meta_value_num',
+            'order'          => 'DESC',
+            'meta_query'     => [
+                'relation' => 'AND',
+                ['key' => WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, 'value' => $visitor_id, 'compare' => '='],
+                ['key' => 'conversation_chatbot_id', 'value' => $chatbot_id, 'compare' => '='],
+            ],
+        ]);
+        if (!$existing) return null;
+        $conversation_id = (int) $existing[0];
+        $last_activity = (int) get_post_meta($conversation_id, 'conversation_last_activity', true);
+        if ($last_activity <= 0) $last_activity = strtotime((string) get_post_meta($conversation_id, 'conversation_started_at', true)) ?: 0;
+        if ($ttl_hours > 0 && (!$last_activity || time() > $last_activity + ($ttl_hours * HOUR_IN_SECONDS))) return null;
+        return $conversation_id;
+    }
+
+    /** Finds a live conversation or creates a new record for the visitor. */
+    public static function find_or_create_active(string $visitor_id, int $chatbot_id, int $ttl_hours, array $visitor_data): int {
+        $conversation_id = self::find_active($visitor_id, $chatbot_id, $ttl_hours);
+        return $conversation_id ?? self::create($visitor_id, $chatbot_id, $visitor_data);
     }
 
     /**

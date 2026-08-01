@@ -242,8 +242,7 @@ Send a message to a chatbot.
 |-----------|------|----------|-------------|
 | `chatbot_id` | int | Yes | ID of the chatbot |
 | `message` | string | Yes | Message text (max 2000 chars) |
-| `visitor_id` | string | Yes | UUID v4 for visitor session |
-| `session_token` | string | No | HMAC session token (server-generated) |
+| `visitor_id` | string | Yes | Cryptographically generated UUID v4 visitor identifier |
 | `metadata` | object | No | Page URL, referrer, language, etc. |
 
 ### GET `/ai-chat/v1/history`

@@ -5,7 +5,7 @@ defined('ABSPATH') || exit;
  * Variables set by AI_Chatbot_CPT_Conversation::render_meta_box().
  *
  * @var WP_Post $post
- * @var string  $session_id
+ * @var string  $visitor_id
  * @var int     $chatbot_id
  * @var array   $messages
  * @var int     $msg_count
@@ -24,7 +24,7 @@ defined('ABSPATH') || exit;
         <table class="widefat striped">
             <tr><th><?php esc_html_e('Conversation ID', 'wp-aigent'); ?></th><td>#<?php echo $post->ID; ?></td></tr>
             <tr><th><?php esc_html_e('Chatbot', 'wp-aigent'); ?></th><td><?php echo esc_html($bot_name); ?> (#<?php echo $chatbot_id; ?>)</td></tr>
-            <tr><th><?php esc_html_e('Session ID', 'wp-aigent'); ?></th><td><code><?php echo esc_html($session_id); ?></code></td></tr>
+            <tr><th><?php esc_html_e('Visitor ID', 'wp-aigent'); ?></th><td><code><?php echo esc_html($visitor_id); ?></code></td></tr>
             <tr><th><?php esc_html_e('Messages', 'wp-aigent'); ?></th><td><?php echo $msg_count; ?></td></tr>
             <?php
             $notify_log = get_post_meta($post->ID, 'conversation_notification_log', true);

@@ -323,19 +323,18 @@ foreach ($providers as $provider) {
                 <div class="description"><?php esc_html_e('Number of past conversation rounds sent to AI as context (0 = no history).', 'wp-aigent'); ?></div>
             </div>
             <div class="ai-chatbot-field">
-                <label for="chatbot_session_ttl"><?php esc_html_e('Session TTL (hours)', 'wp-aigent'); ?></label>
+                <label for="chatbot_session_ttl"><?php esc_html_e('Conversation TTL (hours)', 'wp-aigent'); ?></label>
                 <div style="display:flex;align-items:center;gap:6px;">
                     <input type="number" id="chatbot_session_ttl" name="chatbot_session_ttl" value="<?php echo esc_attr($meta['chatbot_session_ttl']); ?>" min="1" max="720" style="width:80px;" />
                     <span><?php esc_html_e('hours', 'wp-aigent'); ?></span>
                 </div>
-                <div class="description"><?php esc_html_e('Inactivity timeout. After this period a new conversation starts (old one kept as history).', 'wp-aigent'); ?></div>
+                <div class="description"><?php esc_html_e('Checked by the server against Last Activity. After this inactivity period, the next message creates a new Conversation ID while keeping the same Visitor ID.', 'wp-aigent'); ?></div>
             </div>
         </div>
         <div class="ai-chatbot-variables" style="margin-top:12px;">
-            <strong><?php esc_html_e('Session Info', 'wp-aigent'); ?></strong><br>
-            <?php esc_html_e('Each visitor gets a unique UUID stored in browser localStorage. Session ID format:', 'wp-aigent'); ?>
-            <code>sess_{md5(visitor_id + chatbot_id)}</code><br>
-            <?php esc_html_e('When a session expires, a new conversation is created automatically.', 'wp-aigent'); ?>
+            <strong><?php esc_html_e('Visitor & Conversation Identity', 'wp-aigent'); ?></strong><br>
+            <?php esc_html_e('The browser stores only one cryptographically generated Visitor ID. The server uses it with this chatbot and Last Activity to find or create a Conversation ID.', 'wp-aigent'); ?><br>
+            <?php esc_html_e('When inactivity exceeds the TTL, the server creates a new Conversation ID while retaining the same Visitor ID.', 'wp-aigent'); ?>
         </div>
     </div>
 

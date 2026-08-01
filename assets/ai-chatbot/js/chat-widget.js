@@ -1,6 +1,105 @@
 (function() {
     'use strict';
 
+    const BROWSER_STATE_KEY = 'wp_aigent_browser_state';
+    const BrowserState = window.WPAIGentBrowserState || (function() {
+        var memoryState = { version: 1, visitor_id: '', preferences: {} };
+
+        function isObject(value) {
+            return value && typeof value === 'object' && !Array.isArray(value);
+        }
+
+        function normalize(value) {
+            value = isObject(value) ? value : {};
+            return {
+                version: 1,
+                visitor_id: typeof value.visitor_id === 'string' ? value.visitor_id : '',
+                preferences: isObject(value.preferences) ? value.preferences : {},
+            };
+        }
+
+        function read() {
+            try {
+                if (!window.localStorage) return memoryState;
+                var raw = localStorage.getItem(BROWSER_STATE_KEY);
+                if (!raw) return memoryState;
+                memoryState = normalize(JSON.parse(raw));
+            } catch (e) {}
+            return memoryState;
+        }
+
+        function write(state) {
+            memoryState = normalize(state);
+            try {
+                if (window.localStorage) {
+                    localStorage.setItem(BROWSER_STATE_KEY, JSON.stringify(memoryState));
+                }
+            } catch (e) {}
+            return memoryState;
+        }
+
+        function update(mutator) {
+            var state = read();
+            mutator(state);
+            return write(state);
+        }
+
+        function getPreference(scope, key, fallback) {
+            var preferences = read().preferences;
+            var values = isObject(preferences[scope]) ? preferences[scope] : {};
+            return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : fallback;
+        }
+
+        function setPreference(scope, key, value) {
+            update(function(state) {
+                if (!isObject(state.preferences[scope])) state.preferences[scope] = {};
+                state.preferences[scope][key] = value;
+            });
+        }
+
+        function removePreference(scope, key) {
+            update(function(state) {
+                if (!isObject(state.preferences[scope])) return;
+                delete state.preferences[scope][key];
+                if (!Object.keys(state.preferences[scope]).length) delete state.preferences[scope];
+            });
+        }
+
+        function getLegacyVisitorId() {
+            try {
+                return window.localStorage ? localStorage.getItem('wp_aigent_visitor_id') : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function clearLegacyStorage() {
+            try {
+                if (!window.localStorage) return;
+                for (var index = localStorage.length - 1; index >= 0; index--) {
+                    var key = localStorage.key(index);
+                    if (key === 'wp_aigent_visitor_id' || key === 'ai_chat_visitor' || /^(ai_chat_token_|ai_chat_sid_|ai_chat_open_)/.test(key || '')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        return Object.freeze({
+            storageKey: BROWSER_STATE_KEY,
+            getVisitorId: function() { return read().visitor_id; },
+            setVisitorId: function(visitorId) {
+                update(function(state) { state.visitor_id = visitorId; });
+            },
+            getPreference: getPreference,
+            setPreference: setPreference,
+            removePreference: removePreference,
+            getLegacyVisitorId: getLegacyVisitorId,
+            clearLegacyStorage: clearLegacyStorage,
+        });
+    })();
+    window.WPAIGentBrowserState = BrowserState;
+
     class AIChatWidget {
         constructor(container, config) {
             this.container = container;
@@ -8,8 +107,6 @@
 
             this.config = config;
             this.widgetId = config.widget_id;
-            this.sessionId = config.session_id || '';
-            this.sessionToken = config.session_token || '';
             this.apiUrl = (window.AIChatBotGlobals && AIChatBotGlobals.rest_url) || '';
             this.isEditor = config.is_editor === '1';
             this.isOpen = config.layout_mode === 'box';
@@ -27,50 +124,34 @@
                 return;
             }
 
-            this.visitorId = this.safeStorageGet('ai_chat_visitor');
+            this.visitorId = BrowserState.getVisitorId();
+            if (!this.isVisitorId(this.visitorId)) this.visitorId = '';
+            if (!this.visitorId) {
+                this.visitorId = BrowserState.getLegacyVisitorId();
+            }
+            if (!this.isVisitorId(this.visitorId)) this.visitorId = '';
             if (!this.visitorId) {
                 this.visitorId = this.generateUUID();
-                this.safeStorageSet('ai_chat_visitor', this.visitorId);
             }
-
-            var storedToken = this.safeStorageGet('ai_chat_token_' + this.visitorId);
-            this.sessionToken = storedToken || '';
-
-            var storedSessionId = this.safeStorageGet('ai_chat_sid_' + this.visitorId + '_' + this.config.chatbot_id);
-            if (storedSessionId) {
-                this.sessionId = storedSessionId;
-            }
+            BrowserState.setVisitorId(this.visitorId);
+            BrowserState.clearLegacyStorage();
         }
 
         generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0;
-                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-        }
-
-        safeStorageGet(key) {
-            try {
-                return window.localStorage ? localStorage.getItem(key) : null;
-            } catch (e) {
-                return null;
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+            if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+                var bytes = new Uint8Array(16);
+                window.crypto.getRandomValues(bytes);
+                bytes[6] = (bytes[6] & 0x0f) | 0x40;
+                bytes[8] = (bytes[8] & 0x3f) | 0x80;
+                var hex = Array.prototype.map.call(bytes, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+                return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
             }
+            throw new Error('Secure visitor ID generation is unavailable in this browser.');
         }
 
-        safeStorageSet(key, value) {
-            try {
-                if (window.localStorage) {
-                    localStorage.setItem(key, value);
-                }
-            } catch (e) {}
-        }
-
-        safeStorageRemove(key) {
-            try {
-                if (window.localStorage) {
-                    localStorage.removeItem(key);
-                }
-            } catch (e) {}
+        isVisitorId(value) {
+            return typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
         }
 
         async init() {
@@ -99,28 +180,17 @@
         }
 
         scheduleDefaultOpen() {
-            var cacheKey = 'ai_chat_open_' + this.config.chatbot_id;
-            var cached = this.safeStorageGet(cacheKey);
+            var scope = 'chatbot:' + this.config.chatbot_id;
+            var closedAt = Number(BrowserState.getPreference(scope, 'popup_closed_at', 0));
             var ttl = Number(this.config.open_cache_ttl || 1440) * 60 * 1000;
+            if (closedAt && ttl > 0 && Date.now() - closedAt < ttl) return;
+            if (closedAt) BrowserState.removePreference(scope, 'popup_closed_at');
 
-            if (cached === 'closed') {
-                var cachedTime = this.safeStorageGet(cacheKey + '_time');
-                if (cachedTime && (Date.now() - Number(cachedTime)) > ttl) {
-                    this.safeStorageRemove(cacheKey);
-                    this.safeStorageRemove(cacheKey + '_time');
-                    cached = null;
-                }
-            }
-
-            if (cached !== 'closed') {
-                var delay = Number(this.config.fab_open_delay || 0) * 1000;
-                var timer = setTimeout(function() {
-                    if (!this.destroyed) {
-                        this.toggleChat(true);
-                    }
-                }.bind(this), delay);
-                this.timers.push(timer);
-            }
+            var delay = Number(this.config.fab_open_delay || 0) * 1000;
+            var timer = setTimeout(function() {
+                if (!this.destroyed) this.toggleChat(true);
+            }.bind(this), delay);
+            this.timers.push(timer);
         }
 
         async loadHistory() {
@@ -130,8 +200,6 @@
                 var url = (AIChatBotGlobals.history_url || this.apiUrl.replace('/chat', '/history')) + '?' + new URLSearchParams({
                     chatbot_id: this.config.chatbot_id,
                     visitor_id: this.visitorId,
-                    session_id: this.sessionId || '',
-                    session_token: this.sessionToken || '',
                 });
 
                 var res = await fetch(url, {
@@ -143,14 +211,6 @@
                 if (this.destroyed) return;
 
                 if (data.ok && data.data) {
-                    if (data.data.session_token) {
-                        this.sessionToken = data.data.session_token;
-                        this.safeStorageSet('ai_chat_token_' + this.visitorId, data.data.session_token);
-                        if (data.data.session_id) {
-                            this.safeStorageSet('ai_chat_sid_' + this.visitorId + '_' + this.config.chatbot_id, data.data.session_id);
-                        }
-                    }
-
                     if (Array.isArray(data.data.messages) && data.data.messages.length > 0) {
                         this.hasHistory = true;
                         const fragment = document.createDocumentFragment();
@@ -249,17 +309,17 @@
                 this.inputEl.addEventListener('input', () => this.autoResize());
             }
             if (this.fabButtonEl) {
-                this.fabButtonEl.addEventListener('click', () => this.toggleChat());
+                this.fabButtonEl.addEventListener('click', () => this.toggleChat(undefined, true));
             }
             if (this.closeBtn) {
                 this.closeBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    this.toggleChat(false);
+                    this.toggleChat(false, true);
                 }.bind(this));
             }
         }
 
-        toggleChat(forceState) {
+        toggleChat(forceState, persistClose) {
             if (!this.popupEl) return;
             this.isOpen = forceState !== undefined ? forceState : !this.isOpen;
 
@@ -280,10 +340,8 @@
                 this.popupEl.classList.remove('is-open');
                 this.popupEl.style.right = '';
                 this.popupEl.style.left = '';
-                if (!this.isEditor && this.config.fab_default_open === '1') {
-                    var cacheKey = 'ai_chat_open_' + this.config.chatbot_id;
-                    this.safeStorageSet(cacheKey, 'closed');
-                    this.safeStorageSet(cacheKey + '_time', Date.now().toString());
+                if (persistClose && !this.isEditor && this.config.fab_default_open === '1') {
+                    BrowserState.setPreference('chatbot:' + this.config.chatbot_id, 'popup_closed_at', Date.now());
                 }
             }
         }
@@ -338,8 +396,6 @@
                     body: JSON.stringify({
                         chatbot_id: this.config.chatbot_id,
                         message: text,
-                        session_id: this.sessionId,
-                        session_token: this.sessionToken,
                         visitor_id: this.visitorId,
                         metadata: {
                             page: location.href,
@@ -357,11 +413,6 @@
                 this.hideTyping();
 
                 if (data.ok) {
-                    if (data.data && data.data.session_token) {
-                        this.sessionToken = data.data.session_token;
-                        this.safeStorageSet('ai_chat_token_' + this.visitorId, data.data.session_token);
-                        this.safeStorageSet('ai_chat_sid_' + this.visitorId + '_' + this.config.chatbot_id, data.data.session_id);
-                    }
                     this.addMessage('bot', data.data.reply);
                     if (data.data.should_collect_contact && !this.contactShown) {
                         this.contactShown = true;

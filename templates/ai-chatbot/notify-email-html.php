@@ -29,8 +29,8 @@ $th_bg  = '#f2f2f2';
         <tbody>
             <tr><td style="padding:6px 10px;border:<?= $border ?>;background:#f9f9f9;width:120px;">Chatbot</td>
                 <td style="padding:6px 10px;border:<?= $border ?>;"><?= esc_html(($conv['chatbot_name'] ?? '—') . ' (#' . ($conv['chatbot_id'] ?? 0) . ')') ?></td></tr>
-            <tr><td style="padding:6px 10px;border:<?= $border ?>;background:#f9f9f9;">Session</td>
-                <td style="padding:6px 10px;border:<?= $border ?>;"><?= esc_html($conv['session_id'] ?? '—') ?></td></tr>
+            <tr><td style="padding:6px 10px;border:<?= $border ?>;background:#f9f9f9;">Visitor ID</td>
+                <td style="padding:6px 10px;border:<?= $border ?>;"><?= esc_html($conv['visitor_id'] ?? '—') ?></td></tr>
             <tr><td style="padding:6px 10px;border:<?= $border ?>;background:#f9f9f9;">Messages</td>
                 <td style="padding:6px 10px;border:<?= $border ?>;"><?= (int) ($conv['message_count'] ?? 0) ?></td></tr>
             <tr><td style="padding:6px 10px;border:<?= $border ?>;background:#f9f9f9;">Started</td>

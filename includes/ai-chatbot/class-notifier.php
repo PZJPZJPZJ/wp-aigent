@@ -166,7 +166,7 @@ class AI_Chatbot_Notifier {
         $bot = $chatbot_id ? get_post($chatbot_id) : null;
 
         return [
-            'session_id'    => get_post_meta($conversation_id, 'conversation_session_id', true),
+            'visitor_id'    => get_post_meta($conversation_id, WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, true),
             'chatbot_name'  => $bot ? $bot->post_title : '—',
             'chatbot_id'    => $chatbot_id,
             'message_count' => (int) get_post_meta($conversation_id, 'conversation_message_count', true),

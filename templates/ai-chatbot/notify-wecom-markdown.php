@@ -20,7 +20,7 @@ $visitor = $data['visitor'] ?? [];
 | 字段 | 内容 |
 | :--- | :--- |
 | Chatbot | <?= esc_html(($conv['chatbot_name'] ?? '—') . ' (#' . ($conv['chatbot_id'] ?? 0) . ')') ?> |
-| Session | <?= esc_html($conv['session_id'] ?? '—') ?> |
+| Visitor ID | <?= esc_html($conv['visitor_id'] ?? '—') ?> |
 | 消息数 | <?= (int) ($conv['message_count'] ?? 0) ?> |
 | 时间 | <?= esc_html($conv['started_at'] ?? '—') ?> |
 <?php if (!empty($conv['summary'])): ?>

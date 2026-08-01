@@ -1,6 +1,6 @@
 # WP AIgent — 项目指南
 
-> 面向各类开发工具的项目说明文档，可被 `CLAUDE.md`、`.cursor/rules/`、`copilot-instructions.md` 等文件引用。
+> 面向各类开发工具的项目说明文档，可被 `CLAUDE.md` 等文件引用。
 
 ## 项目概览
 
@@ -68,10 +68,9 @@ templates/
 chat-widget.js（fetch）
   → POST /ai-chat/v1/chat
   → AI_Chatbot_Chat_API::handle_chat()
-    → 校验会话（localStorage visitor UUID + HMAC）
-    → 限流（transient：每个 IP / 会话每分钟 30 次）
-    → 获取或创建对话记录
-    → 校验可配置的会话 TTL
+    → 校验全局 Visitor ID（浏览器状态中保存密码学安全随机 UUID v4）
+    → 限流（transient：每个 IP / Visitor ID 每分钟 30 次）
+    → 按 Visitor ID + Chatbot 查找对话，并依据 Last Activity 与 TTL 获取或创建 Conversation ID
     → 加载知识上下文（来自已选 ai_knowledge）
     → 加载最近 N 轮对话、摘要与现有线索
     → 组装 system prompt（背景、规则、JSON Schema、知识、摘要、线索）
@@ -82,13 +81,14 @@ chat-widget.js（fetch）
     → AI_Chatbot_Memory_Manager::append()：保存对话
     → AI_Chatbot_Notifier::notify()：评估规则、发送邮件 / 企业微信通知
     → 保存线索数据和摘要
-    → 返回 { reply, session_token, lead_score, should_collect_contact }
+    → 返回 { reply, conversation_id, lead_score, should_collect_contact }
 ```
 
 ### 关键设计决策
 
 - **无构建步骤**：使用原生 JavaScript 和 CSS，直接编辑源文件。
-- **访客会话**：使用 localStorage UUID 与 HMAC 签名的 session token，不要求登录。
+- **访客身份与对话**：浏览器只通过 `wp_aigent_browser_state` 保存全局、密码学安全随机生成的 UUID v4 Visitor ID 及用户偏好；后端以 Visitor ID、Chatbot、Last Activity 和 TTL 管理 Conversation ID，不要求登录。
+- **浏览器持久化**：所有新的浏览器端持久化数据必须复用 `wp_aigent_browser_state` 的 `{ version, visitor_id, preferences }` 结构，在 `preferences` 下按功能范围存放，禁止新增独立的 localStorage key。
 - **AI 回复格式**：通过 system prompt 要求 AI 返回结构化 JSON；`Lead_Processor` 负责解析，并回退支持 Markdown 代码块中的 JSON。
 - **Provider 所有权**：平台、API URL、API Key 与已获取模型列表属于 `ai_provider`；Chatbot 与未来功能通过 Provider ID 复用连接。
 - **线索与通知规则**：采用分组 OR / AND 规则，规则数组存储在 postmeta。
@@ -171,6 +171,7 @@ Text domain 为 `wp-aigent`。所有面向用户的字符串必须使用 WordPre
 - 保持高内聚、低耦合。模块通过窄且明确的接口协作，不直接依赖其他模块的内部状态或存储细节。
 - 新功能必须考虑未来扩展：将可复用基础设施与功能编排分离，避免一次性的硬编码依赖；仅在确有价值时提供扩展点。
 - 数据所有权必须明确。跨功能复用的能力（例如 Provider 连接）应放入专属模块，不能在多个消费者中复制。
+- 若有重大更改且有可能导致历史逻辑堆积时，以不能堆屎的原则，允许Breaking Change，但必须询问是否进行，不能擅自决定。
 
 ### UI 设计
 

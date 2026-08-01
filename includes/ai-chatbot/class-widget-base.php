@@ -328,13 +328,14 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         ]);
 
         $this->add_live_control('open_cache_ttl', [
-            'label'     => __('Cache TTL (minutes)', 'wp-aigent'),
-            'type'      => \Elementor\Controls_Manager::NUMBER,
-            'min'       => 1,
-            'max'       => 10080,
-            'step'      => 1,
-            'default'   => 1440,
-            'condition' => ['default_open' => '1'],
+            'label'       => __('Close Cache TTL (minutes)', 'wp-aigent'),
+            'description' => __('After a visitor closes an automatically opened popup, do not automatically reopen it until this time has passed.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::NUMBER,
+            'min'         => 1,
+            'max'         => 10080,
+            'step'        => 1,
+            'default'     => 1440,
+            'condition'   => ['default_open' => '1'],
         ]);
 
         $this->end_controls_section();
@@ -384,8 +385,6 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
 
         return [
             'chatbot_id'    => $chatbot_id,
-            'session_id'    => '',
-            'session_token' => '',
             'widget_id'     => $widget_id,
             'layout_mode'   => $layout_mode,
             'greeting'      => (string) ($settings['greeting'] ?? ''),
@@ -416,8 +415,8 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             'fab_hint_font_size' => (string) ($settings['hint_font_size'] ?? '15'),
             'fab_default_open' => !empty($settings['default_open']) ? '1' : '0',
             'fab_open_delay'   => (string) ($settings['open_delay'] ?? '20'),
+            'open_cache_ttl'   => (string) ($settings['open_cache_ttl'] ?? '1440'),
             'popup_transition_duration' => (string) ($settings['popup_transition_duration'] ?? '100'),
-            'open_cache_ttl' => (string) ($settings['open_cache_ttl'] ?? '1440'),
             'is_editor'      => $this->is_elementor_editor() ? '1' : '0',
         ];
     }
@@ -508,8 +507,6 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         var closeIconRendered = renderElementorIcon(closeIcon, 'fas fa-times');
         var config = {
             chatbot_id: settings.chatbot_id || '',
-            session_id: '',
-            session_token: '',
             widget_id: widgetId,
             layout_mode: layoutMode,
             greeting: settings.greeting || '',
@@ -540,8 +537,8 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             fab_hint_font_size: String(settings.hint_font_size || '15'),
             fab_default_open: settings.default_open ? '1' : '0',
             fab_open_delay: String(settings.open_delay || '20'),
-            popup_transition_duration: String(settings.popup_transition_duration || '100'),
             open_cache_ttl: String(settings.open_cache_ttl || '1440'),
+            popup_transition_duration: String(settings.popup_transition_duration || '100'),
             is_editor: '1'
         };
         var configJson = JSON.stringify(config);
