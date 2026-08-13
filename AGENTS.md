@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-WP AIgent 是一个面向 WordPress 的 AI 客情管理插件。当前提供多平台 AI Provider、Elementor 聊天机器人、知识库问答、对话与线索记录、邮件/企业微信通知、Elementor 国家区号字段，以及按时间段手动分析 Elementor Submission 的能力。
+WP AIgent 是一个面向 WordPress 的 AI 客情管理插件。当前提供多平台 AI Provider、Elementor 聊天机器人、知识库问答、对话与线索记录、邮件/企业微信通知、Elementor 国家区号字段，以及按筛选结果手动分析 Elementor Submission 的能力。
 
 长期目标不是堆叠相互独立的 AI 工具，而是以 Visitor、Interaction 和 Customer 为主线，将 Chat、Form 及未来邮件、商城、CRM 等渠道统一转换为客户互动，通过确定性规则与 AI 提取可追溯事实，形成标准 Customer Profile，再驱动生命周期、统计、跟进和自动化。
 
@@ -115,19 +115,22 @@ assets/modules/chatbots/js/widget.js
 ### Elementor Form 分析链路（已实现，部分达到目标）
 
 ```text
-管理员选择日期范围并点击分析
-  → 创建 WP AIgent 自有分析 Job 记录
-  → Elementor Submission Source Adapter 只读游标扫描
-  → 本地确定性标准化来源和联系方式
-  → 仅提取需求类字段并移除联系方式、邮箱、电话和 URL
-  → Provider 模型只接收脱敏后的需求文本
-  → 保存 WP AIgent 自有分析结果
+管理员筛选 Elementor Submission 并点击“更新分析”或“覆盖分析”
+  → 分批扫描全部筛选结果并创建固定 Job Item 快照
+  → Elementor Submission Source Adapter 只读加载原始记录
+  → 对完整 Submission 副本执行本地敏感信息模糊化
+  → Provider 模型分析需求、垃圾邮件和客户意图
+  → 仅按 Elementor submission_id 保存 WP AIgent 自有分析结果
 ```
 
 - 不修改 Elementor Submission、字段、状态或已读标记。
 - 不通过 Elementor Hook、页面加载或 WP Cron 自动开始分析。
-- `source_type + source_record_id` 唯一，成功记录不会重复分析；失败或中断记录允许重试。
-- 没有需求文本时只执行本地分析，不调用 Provider。
+- Elementor `submission_id` 唯一；AIgent 不复制提交时间、来源 URL、联系方式、标准化副本或完整 LLM JSON。
+- “更新分析”在创建快照时批量标记并跳过已成功记录，重试未分析、失败、待处理和过期执行记录；“覆盖分析”重新处理全部筛选结果。
+- 模型可接收表单、页面、Campaign 和全部字段的脱敏副本；不得接收本地原始联系方式。
+- `Submissions` 后台入口以 Elementor 为唯一列表数据源，使用 WordPress 原生列表表格，固定显示原始 ID、Email、Form、Page URL、Submission Date，并追加 Requirements、Spam、Intent、Analysis Status。
+- 默认筛选最近 30 天并按 Submission Date 倒序；搜索、Form、Page URL、日期、Spam、Intent 和 Analysis Status 会共同限定列表及分析任务。
+- Elementor 原记录删除后，AIgent 对应孤儿结果会在列表查询或任务创建前分批清理。
 - 当前结果尚未写入标准 Interaction、Customer Fact 或 Customer Profile，这些能力未实现。
 
 ## 产品架构主线
@@ -362,7 +365,7 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - 浏览器持久化统一使用 `wp_aigent_browser_state` 的 `{ version, visitor_id, preferences }`，新功能只能在 `preferences` 下增加作用域，禁止新建独立 localStorage key。
 - REST/AJAX 必须执行 Capability、nonce、输入校验和限流。
 - Prompt 与日志不得包含 API Key、密码、IP、User Agent 等无业务必要的敏感数据。
-- Forms 模型调用只能发送脱敏后的客户需求文本；来源和联系方式必须在本地处理。
+- Forms 模型调用可以发送完整 Submission 的脱敏副本；姓名、邮箱、电话、WhatsApp、公司等敏感值必须先在本地模糊化，原始联系方式不得发送。
 - 后台显示个人信息必须受 Capability 和隐私策略控制。
 - 重要任务必须有状态、错误摘要和人工重试入口，不能只依赖 PHP error log。
 

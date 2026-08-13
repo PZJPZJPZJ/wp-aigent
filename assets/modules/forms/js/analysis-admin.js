@@ -2,11 +2,15 @@
     'use strict';
 
     var config = window.wpAIgentFormAnalysis || {};
-    var form = document.getElementById('wp-aigent-form-analysis-run');
+    var form = document.getElementById('wp-aigent-submissions-filter');
     var provider = document.getElementById('wp-aigent-analysis-provider');
     var model = document.getElementById('wp-aigent-analysis-model');
     var progress = document.getElementById('wp-aigent-analysis-progress');
-    var button = document.getElementById('wp-aigent-analysis-start');
+    var buttons = form ? Array.prototype.slice.call(form.querySelectorAll('[data-analysis-mode]')) : [];
+    var progressTrack = progress && progress.querySelector('.wp-aigent-progress-track');
+    var progressBar = progressTrack && progressTrack.querySelector('span');
+    var progressLabel = progress && progress.querySelector('.wp-aigent-progress-label');
+    var analysisRunning = false;
 
     function fillModels() {
         if (!provider || !model) return;
@@ -40,33 +44,46 @@
         });
     }
 
+    function setButtonsDisabled(disabled) {
+        analysisRunning = disabled;
+        buttons.forEach(function (button) { button.disabled = disabled; });
+    }
+
     function showJob(job) {
         if (!job || !progress) return;
+        var total = Number(job.total_count || 0);
+        var processed = Number(job.inspected_count || 0);
+        var percent = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 100;
         progress.hidden = false;
-        progress.className = 'notice notice-info inline';
-        progress.textContent = config.i18n.progress
-            .replace('%1$d', job.inspected_count || 0)
-            .replace('%2$d', job.succeeded_count || 0)
-            .replace('%3$d', job.skipped_count || 0)
-            .replace('%4$d', job.failed_count || 0);
+        progress.className = 'wp-aigent-analysis-progress';
+        if (progressBar) progressBar.style.width = percent + '%';
+        if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(percent));
+        if (progressLabel) progressLabel.textContent = config.i18n.progress
+            .replace('%1$d', processed)
+            .replace('%2$d', total)
+            .replace('%3$d', percent)
+            .replace('%4$d', job.succeeded_count || 0)
+            .replace('%5$d', job.skipped_count || 0)
+            .replace('%6$d', job.failed_count || 0);
     }
 
     function run(jobId) {
         request('wp_aigent_form_analysis_batch', { job_id: jobId }).then(function (data) {
             showJob(data.job);
             if (data.done) {
-                progress.className = 'notice notice-success inline';
-                progress.textContent += ' ' + config.i18n.complete;
-                button.disabled = false;
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressTrack) progressTrack.setAttribute('aria-valuenow', '100');
+                if (progressLabel) progressLabel.textContent += ' ' + config.i18n.complete;
+                setButtonsDisabled(false);
                 window.setTimeout(function () { window.location.reload(); }, 900);
                 return;
             }
             run(jobId);
         }).catch(function (error) {
             progress.hidden = false;
-            progress.className = 'notice notice-error inline';
-            progress.textContent = error.message;
-            button.disabled = false;
+            progress.className = 'wp-aigent-analysis-progress notice notice-error inline';
+            if (progressLabel) progressLabel.textContent = error.message;
+            setButtonsDisabled(false);
         });
     }
 
@@ -76,18 +93,35 @@
     }
 
     if (form) form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        button.disabled = true;
-        progress.hidden = false;
-        progress.className = 'notice notice-info inline';
-        progress.textContent = config.i18n.starting;
-        request('wp_aigent_form_analysis_create', {
-            date_from: form.elements.date_from.value,
-            date_to: form.elements.date_to.value
-        }).then(function (data) { run(data.job_id); }).catch(function (error) {
-            progress.className = 'notice notice-error inline';
-            progress.textContent = error.message;
-            button.disabled = false;
-        });
+        if (analysisRunning) event.preventDefault();
     });
+
+    buttons.forEach(function (button) { button.addEventListener('click', function () {
+        var analysisMode = button.dataset.analysisMode === 'overwrite' ? 'overwrite' : 'update';
+        var values = new FormData(form);
+        setButtonsDisabled(true);
+        progress.hidden = false;
+        progress.className = 'wp-aigent-analysis-progress';
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressLabel) progressLabel.textContent = analysisMode === 'overwrite' ? config.i18n.startingOverwrite : config.i18n.startingUpdate;
+        request('wp_aigent_form_analysis_create', {
+            date_from: values.get('date_from') || '',
+            date_to: values.get('date_to') || '',
+            search: values.get('s') || '',
+            form: values.get('form') || '',
+            page_url: values.get('page_url') || '',
+            is_spam: values.get('is_spam') || '',
+            intent: values.get('intent') || '',
+            analysis_status: values.get('analysis_status') || '',
+            analysis_mode: analysisMode
+        }).then(function (data) {
+            showJob(data.job);
+            if (progressLabel) progressLabel.textContent = config.i18n.counted.replace('%d', data.job.total_count || 0);
+            run(data.job_id);
+        }).catch(function (error) {
+            progress.className = 'wp-aigent-analysis-progress notice notice-error inline';
+            if (progressLabel) progressLabel.textContent = error.message;
+            setButtonsDisabled(false);
+        });
+    }); });
 }());

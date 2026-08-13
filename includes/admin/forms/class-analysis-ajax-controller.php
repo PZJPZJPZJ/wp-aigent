@@ -17,6 +17,13 @@ class WP_AIGent_Form_Analysis_Ajax_Controller {
         $result = $this->service->create_job([
             'date_from' => sanitize_text_field(wp_unslash($_POST['date_from'] ?? '')),
             'date_to' => sanitize_text_field(wp_unslash($_POST['date_to'] ?? '')),
+            'analysis_mode' => sanitize_key(wp_unslash($_POST['analysis_mode'] ?? 'update')),
+            'search' => sanitize_text_field(wp_unslash($_POST['search'] ?? '')),
+            'form' => sanitize_text_field(wp_unslash($_POST['form'] ?? '')),
+            'page_url' => esc_url_raw(wp_unslash($_POST['page_url'] ?? '')),
+            'spam' => sanitize_key(wp_unslash($_POST['is_spam'] ?? '')),
+            'intent' => sanitize_key(wp_unslash($_POST['intent'] ?? '')),
+            'analysis_status' => sanitize_key(wp_unslash($_POST['analysis_status'] ?? '')),
         ]);
         if (!empty($result['error'])) wp_send_json_error(['message' => $result['error']], 400);
         wp_send_json_success($result);

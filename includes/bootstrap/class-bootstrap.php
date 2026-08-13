@@ -49,22 +49,23 @@ class WP_AIGent_Bootstrap {
         require_once $includes . 'modules/forms/class-form-analysis-schema.php';
         require_once $includes . 'modules/forms/class-country-resolver.php';
         require_once $includes . 'modules/forms/class-form-analysis-repository.php';
+        require_once $includes . 'modules/forms/class-form-submissions-query.php';
         require_once $includes . 'modules/forms/class-form-submission-normalizer.php';
         require_once $includes . 'modules/forms/class-form-analysis-service.php';
         require_once $includes . 'modules/forms/class-module.php';
         require_once $includes . 'integrations/elementor/class-submission-source-adapter.php';
         require_once $includes . 'integrations/elementor/class-form-enhancer.php';
         require_once $includes . 'admin/forms/class-analysis-ajax-controller.php';
+        require_once $includes . 'admin/forms/class-submissions-list-table.php';
         require_once $includes . 'admin/forms/class-forms-admin-page.php';
         new WP_AIGent_Forms_Module();
         (new WP_AIGent_Elementor_Form_Enhancer())->init();
-        $form_analysis_service = new WP_AIGent_Form_Analysis_Service(
-            new WP_AIGent_Elementor_Submission_Adapter(),
-            new WP_AIGent_Form_Analysis_Repository(),
-            new WP_AIGent_Form_Submission_Normalizer()
-        );
+        $submission_source = new WP_AIGent_Elementor_Submission_Adapter();
+        $form_analysis_repository = new WP_AIGent_Form_Analysis_Repository();
+        $form_submissions_query = new WP_AIGent_Form_Submissions_Query($submission_source, $form_analysis_repository);
+        $form_analysis_service = new WP_AIGent_Form_Analysis_Service($submission_source, $form_analysis_repository, new WP_AIGent_Form_Submission_Normalizer(), $form_submissions_query);
         new WP_AIGent_Form_Analysis_Ajax_Controller($form_analysis_service);
-        if (is_admin()) (new WP_AIGent_Forms_Admin_Page())->register();
+        if (is_admin()) (new WP_AIGent_Forms_Admin_Page($form_submissions_query))->register();
 
         // GitHub updater (attaches hooks unconditionally so WP can detect updates)
         require_once $includes . 'integrations/wordpress/class-github-updater.php';

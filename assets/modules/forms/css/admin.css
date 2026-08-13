@@ -52,17 +52,54 @@
     font-weight: 600;
 }
 
-.wp-aigent-ai-form-admin #wp-aigent-analysis-progress {
-    margin: 16px 0 0;
-    padding: 10px 12px;
+.wp-aigent-ai-form-admin .wp-aigent-analysis-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
 }
 
-.wp-aigent-ai-form-admin .wp-aigent-analysis-table-wrap {
-    overflow-x: auto;
+.wp-aigent-ai-form-admin .wp-aigent-analysis-progress {
+    margin: 16px 0 0;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-progress-track {
+    height: 18px;
+    overflow: hidden;
+    background: #dcdcde;
+    border-radius: 9px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-progress-track span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: #2271b1;
+    border-radius: inherit;
+    transition: width 180ms ease;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-progress-label {
+    margin: 8px 0 0;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-submissions-table {
     margin-top: 14px;
 }
 
-.wp-aigent-ai-form-admin .wp-aigent-analysis-table-wrap td {
-    min-width: 120px;
+.wp-aigent-ai-form-admin .wp-aigent-submissions-table td {
     vertical-align: top;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-submissions-table .column-requirements {
+    min-width: 320px;
+    width: 32%;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-submissions-table .column-page_url {
+    min-width: 240px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-submissions-table .column-intent {
+    min-width: 180px;
 }
