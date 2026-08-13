@@ -1,0 +1,68 @@
+.wp-aigent-ai-form-admin .wp-aigent-settings-panel {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    margin-top: 16px;
+    padding: 18px 22px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-settings-panel h2 {
+    margin: 0 0 12px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 14px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row input[type="checkbox"] {
+    margin-top: 1px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-checkbox-row .description {
+    display: block;
+    margin-top: 3px;
+}
+
+.wp-aigent-ai-form-admin select {
+    min-width: 260px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-analysis-run {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-analysis-run label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-weight: 600;
+}
+
+.wp-aigent-ai-form-admin #wp-aigent-analysis-progress {
+    margin: 16px 0 0;
+    padding: 10px 12px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-analysis-table-wrap {
+    overflow-x: auto;
+    margin-top: 14px;
+}
+
+.wp-aigent-ai-form-admin .wp-aigent-analysis-table-wrap td {
+    min-width: 120px;
+    vertical-align: top;
+}
