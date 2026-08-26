@@ -21,9 +21,9 @@ class AI_Chatbot_Widget {
         wp_register_style('ai-chat-widget', WP_AIGENT_URL . 'assets/modules/chatbots/css/widget.css', [], self::version('assets/modules/chatbots/css/widget.css'));
         wp_register_script('ai-chat-widget', WP_AIGENT_URL . 'assets/modules/chatbots/js/widget.js', [], self::version('assets/modules/chatbots/js/widget.js'), true);
         wp_localize_script('ai-chat-widget', 'AIChatBotGlobals', [
-            'rest_url' => esc_url_raw(rest_url('ai-chat/v1/chat')),
-            'history_url' => esc_url_raw(rest_url('ai-chat/v1/history')),
-            'nonce' => wp_create_nonce('wp_rest'),
+            'rest_url'    => esc_url_raw(rest_url('ai-chat/chat')),
+            'history_url' => esc_url_raw(rest_url('ai-chat/history')),
+            'visitor_url' => esc_url_raw(rest_url('ai-chat/visitor')),
         ]);
     }
 

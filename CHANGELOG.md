@@ -1,0 +1,59 @@
+# Changelog
+
+本文记录 WP AIgent 的重要变更与重大技术决定，格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循项目的“主版本.发布版本.测试版本”规则。
+
+## [Unreleased]
+
+## [2.0.7] - 2026-08-26
+
+### Changed
+
+- Security 设置中的客户端 IP 读取方式改为面向部署场景的选择框：源服务器读取 `REMOTE_ADDR`；服务器反代在可信代理边界内从右向左解析 `X-Forwarded-For`，并在缺失时回退 `X-Real-IP`；Cloudflare 代理只在连接来自 Cloudflare 官方网络或额外可信 CIDR 时读取 `CF-Connecting-IP`。
+- Cloudflare 模式内置当前官方 IPv4 与 IPv6 代理网段；额外 Trusted proxy CIDRs 仅用于中间 Nginx、负载均衡或 Tunnel。若 Web Server 已把真实 IP 恢复到 `REMOTE_ADDR`，仍使用源服务器模式。
+- 旧 `client_ip_source` 设置自动映射到新的 `client_ip_mode`，源服务器映射为 `origin_server`，原代理 Header 模式映射为 `reverse_proxy`。
+
+### Security
+
+- 三种模式均在可信代理边界外回退 `REMOTE_ADDR`，避免客户端直接伪造 `X-Forwarded-For`、`X-Real-IP` 或 `CF-Connecting-IP` 绕过 Visitor 签发与公共接口限流。
+
+## [2.0.6] - 2026-08-26
+
+### Added
+
+- 新增全局 Security 设置，分别配置 Visitor 签发、Chat、History、消息长度、客户端 IP 来源和可信代理 CIDR。
+- 新增 Chat Application Service，公共 REST 与管理员预览在完成各自权限校验后复用同一聊天编排。
+
+### Changed
+
+- Visitor ID 改为服务端通过 `random_bytes()` 生成的 UUID v4，并使用 90 天滚动有效的 Host-only、HttpOnly、SameSite=Lax 签名 Cookie 证明持有权；HTTPS 同时使用 Secure 与 `__Host-` 前缀，剩余 15 天内访问时续签同一 Visitor ID。
+- REST 入口改为无版本 URL：`POST /ai-chat/visitor`、`POST /ai-chat/chat`、`POST /ai-chat/history`。History 从 GET 改为 POST，Chat 与 History 仅从 Cookie 取得可信 Visitor ID。
+- 浏览器状态升级为 version 2，只保留公开 `visitor_id` 和 UI preferences；所有前端请求使用 `credentials: include`，为部署方配置的可信子域名 CORS 保留能力。
+- Chat 和 History 限流拆分为独立的 IP 桶与 Visitor 桶；代理 Header 只有在 `REMOTE_ADDR` 命中可信代理 CIDR 时才会解析。
+- **重大决定：服务端拥有 Visitor 身份。** 背景是旧版仅校验客户端 UUID 格式，攻击者可冒用身份写入消息或读取历史。最终采用无状态 HttpOnly HMAC Cookie，不建立 Visitor Session 表，也不使用 localStorage Bearer Token 或父域共享 Cookie。该决定不迁移或删除旧 Conversation，但旧无签名身份不能认领旧历史；部署必须清理页面/CDN 缓存，回滚会重新暴露原漏洞且不能恢复旧浏览器关联。
+- **重大决定：统一变更与决策记录。** 项目删除 `docs/` 与独立 ADR 机制，今后的所有修改和重大决定统一写入本文件。选择 Changelog 是为了让变更、版本、发布说明和 Commit Message 使用同一事实来源；旧 ADR 的有效决定迁入本文件，回滚时不得重新创建 `docs/adr/`。
+
+### Removed
+
+- 移除旧 `/ai-chat/v1/...` 路由、GET History、请求中的 `visitor_id`/`visitor_token` 凭证和 localStorage Visitor Token，不提供兼容转发。
+- 移除 `docs/adr/` 及独立 ADR 文件。
+- Chat 与 History 公共响应不再返回内部 `conversation_id`。
+
+### Fixed
+
+- 修复客户端可自选 Visitor ID 导致的身份冒用、跨 Visitor 消息写入和聊天历史越权读取。
+- 修复直接信任 `X-Forwarded-For`、轮换 Visitor ID 可绕过组合限流的问题。
+
+### Security
+
+- Visitor 签名不再进入 URL、JSON、Header、localStorage、日志或 Prompt；篡改、过期或 Salt 变化后的 Cookie 无法访问旧身份。
+- Visitor、Chat 和 History 响应使用 private/no-store 缓存策略，公开访客 WordPress REST nonce 不再被误用为匿名身份凭证。
+
+## [2.0.5] - 2026-08-13
+
+### Added
+
+- 新增 Elementor Submission 手动分析、筛选快照 Job、本地敏感信息模糊化、需求总结、垃圾邮件和意图分析。
+
+### Changed
+
+- **重大决定：Forms 分析模块边界。** Forms 拥有分析配置、任务编排、本地标准化、结果表和独立 Schema Version；Elementor Integration 只通过 `WP_AIGent_Form_Submission_Source` 契约提供只读 DTO，不向业务层传递第三方对象，也不写 Elementor 数据。分析结果只以 `submission_id` 关联，不复制原始字段；每个 Job 固化全部筛选命中的 ID，同一时间只允许一个活动 Job。替代方案中的直接跨模块 SQL、修改 Elementor Submission 或复制完整原始记录均被拒绝，以保持来源只读、隐私边界和后续 AI Gateway 可替换性。

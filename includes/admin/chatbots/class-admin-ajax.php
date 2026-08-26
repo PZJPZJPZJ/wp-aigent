@@ -21,24 +21,23 @@ class AI_Chatbot_Admin_Ajax {
         }
 
         $message = sanitize_text_field($_POST['message'] ?? 'Hello');
+        if ($message === '' || mb_strlen($message) > (int) WP_AIGent_Security_Settings::get('max_message_length')) {
+            wp_send_json_error(['message' => __('Invalid preview message.', 'wp-aigent')], 400);
+        }
 
-        // Use a deterministic preview visitor ID so preview follows the public API path.
-        $hash = md5('admin_preview_' . $chatbot_id);
-        $visitor_id = substr($hash, 0, 8) . '-' . substr($hash, 8, 4) . '-4' . substr($hash, 12, 3) . '-a' . substr($hash, 15, 3) . '-' . substr($hash, 18, 12);
+        // Admin preview is already protected by capability and nonce checks, so it
+        // calls the application service with a server-owned preview identity.
+        $visitor_id = WP_AIGent_Visitor_Identity::preview_id(get_current_user_id(), $chatbot_id);
+        $service = new AI_Chatbot_Chat_Service();
+        $result = $service->send(
+            $chatbot_id,
+            $message,
+            $visitor_id,
+            ['page' => admin_url(), 'referrer' => '', 'language' => 'en'],
+            WP_AIGent_Bootstrap::get_client_ip()
+        );
 
-        // Simulate a chat via REST
-        $request = new WP_REST_Request('POST', '/ai-chat/v1/chat');
-        $request->set_body_params([
-            'chatbot_id'    => $chatbot_id,
-            'message'       => $message,
-            'visitor_id'    => $visitor_id,
-            'metadata'      => ['page' => admin_url(), 'referrer' => '', 'language' => 'en'],
-        ]);
-
-        $response = AI_Chatbot_Chat_API::handle_chat($request);
-        $data = $response->get_data();
-
-        wp_send_json($data);
+        wp_send_json($result['body'], (int) $result['status']);
     }
 
     /**

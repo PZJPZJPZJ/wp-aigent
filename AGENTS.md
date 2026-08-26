@@ -29,11 +29,11 @@ includes/
 ├── core/                            # 不依赖具体业务模块
 │   ├── ai/                          # [部分实现] AI Client、Token Usage；目标为共享 AI Gateway
 │   ├── contracts/                   # [部分实现] 当前包含 Form Submission Source 契约
-│   ├── identity/                    # [部分实现] 当前仅有全局 Visitor ID 技术契约
+│   ├── identity/                    # [部分实现] 全局 Visitor ID 与后台签发凭证
 │   ├── jobs/                        # [未实现] Job、重试、锁与执行器
 │   ├── database/                    # [未实现] 通用事务、分页与数据库能力
 │   ├── http/                        # [未实现] REST 响应、权限、限流与校验基础设施
-│   ├── security/                    # [未实现] 通用凭据、脱敏、Capability 与 nonce 辅助
+│   ├── security/                    # [部分实现] 当前拥有全局 Security 设置
 │   ├── attribution/                 # [未实现] 标准 UTM、referrer、click ID 模型
 │   ├── events/                      # [未实现] 领域事件分发与事件名称约束
 │   └── support/                     # [未实现] 少量真正通用的值对象与纯函数
@@ -66,8 +66,7 @@ assets/
 templates/
 └── modules/<module>/                # 模块模板和默认配置；不得查询数据库
 tests/                               # [未实现] unit / integration / contract
-docs/
-└── adr/                             # 重大架构决策记录
+CHANGELOG.md                         # 变更日志、重大决定、兼容与回滚记录
 ```
 
 不存在代码的规划目录不应为了“看起来完整”而提前创建。目录应在出现真实实现时建立，禁止空目录、单纯转发类和无业务价值的层级。
@@ -96,9 +95,9 @@ docs/
 
 ```text
 assets/modules/chatbots/js/widget.js
-  → POST /ai-chat/v1/chat
+  → POST /ai-chat/chat
   → AI_Chatbot_Chat_API::handle_chat()
-    → Visitor ID 校验与 IP / Visitor 限流
+    → HttpOnly Visitor Cookie 校验与独立 IP / Visitor 限流
     → 按 Visitor + Chatbot + Last Activity + TTL 获取或创建 Conversation
     → Knowledge Loader 加载候选知识
     → Memory Manager 加载历史、摘要和已有 Lead
@@ -345,8 +344,11 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 
 | 方法 | 端点 | 状态 | 说明 |
 | --- | --- | --- | --- |
-| POST | `/ai-chat/v1/chat` | 已实现 | 发送 Chatbot 消息 |
-| GET | `/ai-chat/v1/history` | 已实现 | 按 Visitor 加载当前会话历史 |
+| POST | `/ai-chat/visitor` | 已实现 | 校验、续签或由后台签发 HttpOnly Visitor 凭证 |
+| POST | `/ai-chat/chat` | 已实现 | 使用 Visitor Cookie 发送 Chatbot 消息 |
+| POST | `/ai-chat/history` | 已实现 | 使用 Visitor Cookie 加载当前会话历史 |
+
+公开 REST URL 不包含 `v1`、`v2` 等版本段。Chat 与 History 不接受请求参数、Header 或 localStorage 中的 Visitor Token，服务端只能从已签名的 HttpOnly Cookie 取得可信 Visitor ID。
 
 当前扩展点：
 
@@ -361,9 +363,13 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 ## 安全与隐私
 
 - Provider API Key 使用 WordPress salts 派生密钥进行 AES-256-CBC 加密存储。
-- Visitor ID 必须是密码学安全 UUID v4，不得用于认证或授权。
-- 浏览器持久化统一使用 `wp_aigent_browser_state` 的 `{ version, visitor_id, preferences }`，新功能只能在 `preferences` 下增加作用域，禁止新建独立 localStorage key。
+- Visitor ID 必须由后台使用密码学安全随机源签发，不得用于登录认证、后台授权或直接认定真实用户；Chat 与 History 只能信任由服务端验证的 Visitor Cookie。
+- Visitor 凭证使用 Host-only、HttpOnly、SameSite=Lax Cookie；HTTPS 下必须同时使用 Secure 与 `__Host-` 前缀。凭证不得进入 URL、JSON、localStorage、日志或 Prompt。
+- 浏览器持久化统一使用 version 2 的 `wp_aigent_browser_state`：`{ version, visitor_id, preferences }`。这里只保存公开 Visitor ID 和 UI 偏好，新功能只能在 `preferences` 下增加作用域，禁止新建独立 localStorage key。
+- Visitor Cookie 采用 90 天滚动有效期，剩余 15 天内访问时续签同一 Visitor ID；缺失、过期、签名错误或被篡改的旧身份必须重新签发，不能访问原身份的历史对话。
+- 插件不实施严格同源 Origin 校验，也不输出通配凭据 CORS；可信子域名访问必须由部署方在 WordPress、Web Server 或反向代理中配置明确 CORS，并使用带凭据请求。
 - REST/AJAX 必须执行 Capability、nonce、输入校验和限流。
+- 客户端 IP 读取使用 Security 设置中的部署模式：源服务器读取 `REMOTE_ADDR`；服务器反代只在可信代理 CIDR 后解析 `X-Forwarded-For`/`X-Real-IP`；Cloudflare 只在官方网络或额外可信 CIDR 后读取 `CF-Connecting-IP`。不得无条件信任客户端 Header。
 - Prompt 与日志不得包含 API Key、密码、IP、User Agent 等无业务必要的敏感数据。
 - Forms 模型调用可以发送完整 Submission 的脱敏副本；姓名、邮箱、电话、WhatsApp、公司等敏感值必须先在本地模糊化，原始联系方式不得发送。
 - 后台显示个人信息必须受 Capability 和隐私策略控制。
@@ -389,6 +395,15 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - 当前没有正式 linter；变更至少执行所有 PHP 文件 `php -l`、JavaScript `node --check` 和 `git diff --check`。
 - 推送符合 `v*` 的 Tag 会触发 `.github/workflows/release.yml` 创建 GitHub Release。
 
+## Changelog 与重大决定
+
+- 项目不使用 `docs/`、`docs/adr/` 或独立 ADR 文件；禁止重新创建这些目录记录架构决定。
+- 每次代码、配置、接口、数据、文档或行为修改都必须同步写入根目录 `CHANGELOG.md`，不得只依赖 Git 历史、Commit Message 或聊天记录。
+- `CHANGELOG.md` 遵循 Keep a Changelog 结构，使用 `[Unreleased]` 和带 ISO 日期的版本标题，并按 `Added / Changed / Deprecated / Removed / Fixed / Security` 分类；没有内容的分类不创建。
+- 未完成工作记录在 `[Unreleased]`。形成可以安装、运行并交付测试的构建时，必须先递增插件版本，再把本次条目归入同版本标题；插件头、Changelog、交付说明和后续 Tag 必须一致。
+- 重大架构或产品决定必须在对应版本的 `Changed` 条目中同时记录背景、最终决定、主要替代方案、数据与兼容影响、部署或回滚要求，确保可以据此编写 Commit Message 和发布说明。
+- Commit Message 应概括对应 Changelog 条目，但不能替代 Changelog；修复后续错误时新增条目，禁止改写已经发布版本的历史事实。
+
 ## 版本号规则
 
 版本号固定使用 `主版本.发布版本.测试版本` 三段格式：
@@ -396,7 +411,7 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - 最小位是测试版本号：每完成一个可以安装、运行并交付测试的构建必须递增，例如 `2.0.5 → 2.0.6`。
 - 中间位是发布版本号：功能完成并通过迁移、回归和发布验收后递增，同时将测试位归零，例如 `2.0.6 → 2.1.0`。
 - 最大位是重大更新版本号：存在重大架构、核心数据模型或公开产品边界升级时递增，同时将后两位归零，例如 `2.9.4 → 3.0.0`。
-- 任何声称“可运行”“可测试”“可发布”的交付都必须先同步更新 `wp-aigent.php` 插件头版本；代码、Release Tag 和交付说明中的版本必须一致。
+- 任何声称“可运行”“可测试”“可发布”的交付都必须先同步更新 `wp-aigent.php` 插件头版本和 `CHANGELOG.md` 对应版本；代码、Changelog、Release Tag 和交付说明中的版本必须一致。
 - 单纯文档草稿、未完成中间状态或不可运行的工作区变更不递增版本。
 
 ## 禁止的反模式
@@ -422,4 +437,4 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - 当前 `conversation_lead_data` 是过渡数据；在标准 Interaction、Fact、Profile 和数据迁移完成前不得直接删除。
 - 当新需求需要复用旧内部逻辑时，先提取窄 Service/Query/Contract，再由调用方使用，禁止跨模块引用内部存储类。
 - Breaking Change、公开入口删除或历史数据迁移必须先给出迁移步骤、回滚方式和影响范围，并获得明确确认。
-- 重大架构决定写入 `docs/adr/`，说明背景、决定、替代方案、数据影响和兼容影响。
+- 重大架构决定统一写入 `CHANGELOG.md` 对应版本的 `Changed` 条目，记录背景、决定、替代方案、数据影响、兼容影响与回滚要求。

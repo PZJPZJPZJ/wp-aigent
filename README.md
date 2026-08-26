@@ -32,7 +32,7 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 - Visitor data collection: name, email, WhatsApp, country, project type, and more
 
 ### 📊 Conversation Management
-- Visitor-based session management with localStorage UUID
+- Server-issued Visitor UUID with a 90-day rolling HttpOnly cookie
 - Configurable session TTL (hours) before auto-rotation
 - Full conversation history with timestamps, model names, and token usage
 - Token usage tracking with support for cached tokens (OpenAI & Anthropic)
@@ -71,12 +71,13 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 - **Conversation viewer** — detailed read-only view with message history, lead data, token usage, and notification log
 - **Admin columns** — quick overview of platform, model, lead score, and notification status
 - **API Key encryption** — AES-256-CBC encrypted storage using WordPress salts
-- **Rate limiting** — 30 requests per minute per IP/session
+- **Rate limiting** — independent configurable limits per Visitor and per resolved client IP
+- **Proxy-aware client IP** — deployment modes for origin servers, trusted reverse proxies, and Cloudflare proxy traffic
 
 ### 🔌 Integration
 - **Elementor widget** — drag-and-drop integration with any Elementor page
 - **AI Forms** — adds a Country Code field type to Elementor Forms with CF-IPCountry detection
-- **REST API** — `/ai-chat/v1/chat` and `/ai-chat/v1/history` endpoints
+- **REST API** — versionless `/ai-chat/visitor`, `/ai-chat/chat`, and `/ai-chat/history` endpoints
 - **Auto-update** — GitHub Release updater built-in (Update URI support)
 - **i18n-ready** — full text domain with customizable UI strings (title, subtitle, placeholder)
 
@@ -234,25 +235,31 @@ Each chatbot configures an independent primary Provider/model pair and an option
 
 ## REST API
 
-### POST `/ai-chat/v1/chat`
+公开接口不使用 `v1`、`v2` 等 URL 版本段。Visitor 签名只存在于 Host-only、HttpOnly Cookie，不得通过参数、Header、响应或 localStorage 传递。前端请求必须携带浏览器凭证；可信子域名还需由部署方配置明确的凭据 CORS。
 
-Send a message to a chatbot.
+### POST `/ai-chat/visitor`
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `chatbot_id` | int | Yes | ID of the chatbot |
-| `message` | string | Yes | Message text (max 2000 chars) |
-| `visitor_id` | string | Yes | Cryptographically generated UUID v4 visitor identifier |
-| `metadata` | object | No | Page URL, referrer, language, etc. |
+校验现有 Visitor Cookie，必要时签发新身份，并在剩余有效期不超过 15 天时续签。响应只包含公开的 `visitor_id` 和凭证到期时间。
 
-### GET `/ai-chat/v1/history`
+### POST `/ai-chat/chat`
 
-Load conversation history without creating a new session.
+发送 Chatbot 消息。Visitor ID 由服务端从 Cookie 取得。
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `chatbot_id` | int | Yes | ID of the chatbot |
-| `visitor_id` | string | Yes | UUID v4 for visitor session |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `chatbot_id` | int | 是 | 已发布 Chatbot 的 ID |
+| `message` | string | 是 | 消息文本，长度受 Security 设置限制 |
+| `metadata` | object | 否 | Page URL、referrer 和 language |
+
+### POST `/ai-chat/history`
+
+加载当前有效 Conversation 的历史，但不创建空 Conversation。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `chatbot_id` | int | 是 | 已发布 Chatbot 的 ID |
+
+Chat 与 History 缺少有效 Cookie 时返回 HTTP 401 和 `visitor_credential_required`。旧的无签名 Visitor ID、`visitor_token` 参数和 `/ai-chat/v1/...` 路由不再受支持。
 
 ---
 

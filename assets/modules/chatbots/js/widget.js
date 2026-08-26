@@ -3,7 +3,7 @@
 
     const BROWSER_STATE_KEY = 'wp_aigent_browser_state';
     const BrowserState = window.WPAIGentBrowserState || (function() {
-        var memoryState = { version: 1, visitor_id: '', preferences: {} };
+        var memoryState = { version: 2, visitor_id: '', preferences: {} };
 
         function isObject(value) {
             return value && typeof value === 'object' && !Array.isArray(value);
@@ -11,10 +11,16 @@
 
         function normalize(value) {
             value = isObject(value) ? value : {};
+            var preferences = isObject(value.preferences) ? Object.assign({}, value.preferences) : {};
+            if (isObject(preferences.identity)) {
+                preferences.identity = Object.assign({}, preferences.identity);
+                delete preferences.identity.visitor_token;
+                if (!Object.keys(preferences.identity).length) delete preferences.identity;
+            }
             return {
-                version: 1,
+                version: 2,
                 visitor_id: typeof value.visitor_id === 'string' ? value.visitor_id : '',
-                preferences: isObject(value.preferences) ? value.preferences : {},
+                preferences: preferences,
             };
         }
 
@@ -65,14 +71,6 @@
             });
         }
 
-        function getLegacyVisitorId() {
-            try {
-                return window.localStorage ? localStorage.getItem('wp_aigent_visitor_id') : null;
-            } catch (e) {
-                return null;
-            }
-        }
-
         function clearLegacyStorage() {
             try {
                 if (!window.localStorage) return;
@@ -94,7 +92,6 @@
             getPreference: getPreference,
             setPreference: setPreference,
             removePreference: removePreference,
-            getLegacyVisitorId: getLegacyVisitorId,
             clearLegacyStorage: clearLegacyStorage,
         });
     })();
@@ -114,40 +111,45 @@
             this.timers = [];
             this.destroyed = false;
 
-            this.prepareSession();
             this.init();
         }
 
-        prepareSession() {
+        async prepareSession(forceRefresh) {
             if (this.isEditor) {
                 this.visitorId = 'editor-preview';
                 return;
             }
 
-            this.visitorId = BrowserState.getVisitorId();
-            if (!this.isVisitorId(this.visitorId)) this.visitorId = '';
-            if (!this.visitorId) {
-                this.visitorId = BrowserState.getLegacyVisitorId();
-            }
-            if (!this.isVisitorId(this.visitorId)) this.visitorId = '';
-            if (!this.visitorId) {
-                this.visitorId = this.generateUUID();
-            }
-            BrowserState.setVisitorId(this.visitorId);
             BrowserState.clearLegacyStorage();
+            BrowserState.setVisitorId(BrowserState.getVisitorId());
+            if (forceRefresh) window.wpAIgentVisitorCredentialPromise = null;
+
+            if (!window.wpAIgentVisitorCredentialPromise) {
+                window.wpAIgentVisitorCredentialPromise = this.requestVisitorCredential().catch(function(error) {
+                    window.wpAIgentVisitorCredentialPromise = null;
+                    throw error;
+                });
+            }
+            var credential = await window.wpAIgentVisitorCredentialPromise;
+            this.visitorId = credential.visitor_id;
+            BrowserState.setVisitorId(this.visitorId);
         }
 
-        generateUUID() {
-            if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
-            if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
-                var bytes = new Uint8Array(16);
-                window.crypto.getRandomValues(bytes);
-                bytes[6] = (bytes[6] & 0x0f) | 0x40;
-                bytes[8] = (bytes[8] & 0x3f) | 0x80;
-                var hex = Array.prototype.map.call(bytes, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
-                return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+        async requestVisitorCredential() {
+            var globals = window.AIChatBotGlobals || {};
+            if (!globals.visitor_url) throw new Error('Visitor identity endpoint is unavailable.');
+
+            var response = await fetch(globals.visitor_url, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Accept': 'application/json' },
+            });
+            var payload = await response.json();
+            var credential = payload && payload.data ? payload.data : {};
+            if (!response.ok || !payload.ok || !this.isVisitorId(credential.visitor_id)) {
+                throw new Error(payload.message || 'The server could not issue a visitor identity.');
             }
-            throw new Error('Secure visitor ID generation is unavailable in this browser.');
+            return credential;
         }
 
         isVisitorId(value) {
@@ -171,7 +173,12 @@
             }
 
             if (!this.isEditor) {
-                await this.loadHistory();
+                try {
+                    await this.prepareSession();
+                    await this.loadHistory();
+                } catch (error) {
+                    console.error('Visitor identity error:', error);
+                }
             }
 
             if (!this.destroyed && !this.hasHistory && this.config.greeting) {
@@ -193,22 +200,26 @@
             this.timers.push(timer);
         }
 
-        async loadHistory() {
+        async loadHistory(allowCredentialRetry) {
             if (!this.apiUrl || !window.AIChatBotGlobals) return;
+            if (allowCredentialRetry === undefined) allowCredentialRetry = true;
 
             try {
-                var url = (AIChatBotGlobals.history_url || this.apiUrl.replace('/chat', '/history')) + '?' + new URLSearchParams({
-                    chatbot_id: this.config.chatbot_id,
-                    visitor_id: this.visitorId,
-                });
+                var url = AIChatBotGlobals.history_url || this.apiUrl.replace('/chat', '/history');
 
                 var res = await fetch(url, {
-                    method: 'GET',
-                    headers: { 'X-WP-Nonce': AIChatBotGlobals.nonce },
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chatbot_id: this.config.chatbot_id }),
                 });
 
                 var data = await res.json();
                 if (this.destroyed) return;
+                if (res.status === 401 && allowCredentialRetry) {
+                    await this.prepareSession(true);
+                    return this.loadHistory(false);
+                }
 
                 if (data.ok && data.data) {
                     if (Array.isArray(data.data.messages) && data.data.messages.length > 0) {
@@ -387,28 +398,9 @@
             this.showTyping();
 
             try {
-                const res = await fetch(this.apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': AIChatBotGlobals.nonce,
-                    },
-                    body: JSON.stringify({
-                        chatbot_id: this.config.chatbot_id,
-                        message: text,
-                        visitor_id: this.visitorId,
-                        metadata: {
-                            page: location.href,
-                            referrer: document.referrer,
-                            language: navigator.language,
-                            user_agent: navigator.userAgent,
-                            screen: screen.width + 'x' + screen.height,
-                            timestamp: new Date().toISOString(),
-                        },
-                    }),
-                });
-
-                const data = await res.json();
+                await this.prepareSession();
+                const result = await this.requestChat(text, true);
+                const data = result.data;
                 if (this.destroyed) return;
                 this.hideTyping();
 
@@ -427,6 +419,33 @@
                 this.hideTyping();
                 this.addMessage('bot', 'Sorry, a network error occurred. Please try again.');
             }
+        }
+
+        async requestChat(text, allowCredentialRetry) {
+            const res = await fetch(this.apiUrl, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chatbot_id: this.config.chatbot_id,
+                    message: text,
+                    metadata: {
+                        page: location.href,
+                        referrer: document.referrer,
+                        language: navigator.language,
+                    },
+                }),
+            });
+
+            const data = await res.json();
+            if (res.status === 401 && allowCredentialRetry) {
+                await this.prepareSession(true);
+                return this.requestChat(text, false);
+            }
+
+            return { data: data };
         }
 
         createMessageElement(role, content) {
