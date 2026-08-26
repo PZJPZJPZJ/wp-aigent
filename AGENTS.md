@@ -97,7 +97,7 @@ CHANGELOG.md                         # 变更日志、重大决定、兼容与�
 assets/modules/chatbots/js/widget.js
   → POST /ai-chat/chat
   → AI_Chatbot_Chat_API::handle_chat()
-    → HttpOnly Visitor Cookie 校验与独立 IP / Visitor 限流
+    → 校验HttpOnly Visitor Cookie；缺失时限流签发新身份；再执行独立IP / Visitor限流
     → 按 Visitor + Chatbot + Last Activity + TTL 获取或创建 Conversation
     → Knowledge Loader 加载候选知识
     → Memory Manager 加载历史、摘要和已有 Lead
@@ -345,10 +345,10 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 | 方法 | 端点 | 状态 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/ai-chat/visitor` | 已实现 | 校验、续签或由后台签发 HttpOnly Visitor 凭证 |
-| POST | `/ai-chat/chat` | 已实现 | 使用 Visitor Cookie 发送 Chatbot 消息 |
+| POST | `/ai-chat/chat` | 已实现 | 使用Visitor Cookie发送消息；缺失时由服务端限流签发新身份 |
 | POST | `/ai-chat/history` | 已实现 | 使用 Visitor Cookie 加载当前会话历史 |
 
-公开 REST URL 不包含 `v1`、`v2` 等版本段。Chat 与 History 不接受请求参数、Header 或 localStorage 中的 Visitor Token，服务端只能从已签名的 HttpOnly Cookie 取得可信 Visitor ID。
+公开 REST URL 不包含 `v1`、`v2` 等版本段。请求参数、Header或localStorage中的Visitor ID/Token不得参与授权；为兼容缓存旧脚本可以忽略这些字段，但服务端只能从已签名的HttpOnly Cookie或本次新签发身份取得可信Visitor ID。
 
 当前扩展点：
 

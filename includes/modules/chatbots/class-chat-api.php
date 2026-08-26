@@ -30,21 +30,10 @@ class AI_Chatbot_Chat_API {
         $credential = null;
 
         if ($identity === null) {
-            $client_ip = WP_AIGent_Bootstrap::get_client_ip();
-            if (self::is_rate_limited(
-                'visitor_issue_ip',
-                $client_ip,
-                (int) WP_AIGent_Security_Settings::get('visitor_issue_limit'),
-                (int) WP_AIGent_Security_Settings::get('visitor_issue_window')
-            )) {
-                return self::error(
-                    'visitor_issue_rate_limited',
-                    __('Too many new visitor identities. Please try again later.', 'wp-aigent'),
-                    429
-                );
+            $credential = self::issue_visitor_identity($now);
+            if ($credential instanceof WP_REST_Response) {
+                return $credential;
             }
-
-            $credential = WP_AIGent_Visitor_Identity::issue($now);
             $identity = $credential;
         } elseif (WP_AIGent_Visitor_Identity::should_refresh($identity, $now)) {
             $credential = WP_AIGent_Visitor_Identity::renew($identity['visitor_id'], $now);
@@ -67,23 +56,6 @@ class AI_Chatbot_Chat_API {
     }
 
     public static function handle_chat(WP_REST_Request $request): WP_REST_Response {
-        if (self::has_legacy_credential($request)) {
-            return self::error(
-                'legacy_visitor_credential_not_supported',
-                __('Visitor credentials must be supplied by the server-owned cookie.', 'wp-aigent'),
-                400
-            );
-        }
-
-        $identity = WP_AIGent_Visitor_Identity::current();
-        if ($identity === null) {
-            return self::error(
-                'visitor_credential_required',
-                __('A valid visitor credential is required.', 'wp-aigent'),
-                401
-            );
-        }
-
         $chatbot_id = (int) $request->get_param('chatbot_id');
         $chatbot = get_post($chatbot_id);
         if (!$chatbot || $chatbot->post_type !== 'ai_chatbot' || $chatbot->post_status !== 'publish') {
@@ -100,19 +72,35 @@ class AI_Chatbot_Chat_API {
 
         $client_ip = WP_AIGent_Bootstrap::get_client_ip();
         $window = (int) WP_AIGent_Security_Settings::get('chat_rate_window');
-        $ip_limited = self::is_rate_limited(
+        if (self::is_rate_limited(
             'chat_ip',
             $client_ip,
             (int) WP_AIGent_Security_Settings::get('chat_ip_rate_limit'),
             $window
-        );
-        $visitor_limited = self::is_rate_limited(
+        )) {
+            return self::error('rate_limited', __('Too many requests. Please try again later.', 'wp-aigent'), 429);
+        }
+
+        $now = time();
+        $identity = WP_AIGent_Visitor_Identity::current($now);
+        $credential = null;
+        if ($identity === null) {
+            // Cached pre-cookie widgets may still send a client-owned UUID or
+            // token. Never trust or reclaim those values; issue a new server-
+            // owned identity and continue the current message instead.
+            $credential = self::issue_visitor_identity($now);
+            if ($credential instanceof WP_REST_Response) {
+                return $credential;
+            }
+            $identity = $credential;
+        }
+
+        if (self::is_rate_limited(
             'chat_visitor',
             $identity['visitor_id'],
             (int) WP_AIGent_Security_Settings::get('chat_visitor_rate_limit'),
             $window
-        );
-        if ($ip_limited || $visitor_limited) {
+        )) {
             return self::error('rate_limited', __('Too many requests. Please try again later.', 'wp-aigent'), 429);
         }
 
@@ -127,18 +115,13 @@ class AI_Chatbot_Chat_API {
 
         $response = new WP_REST_Response($result['body'], (int) $result['status']);
         self::set_private_no_store($response);
+        if ($credential !== null) {
+            $response->header('Set-Cookie', WP_AIGent_Visitor_Identity::cookie_header($credential, $now));
+        }
         return $response;
     }
 
     public static function handle_history(WP_REST_Request $request): WP_REST_Response {
-        if (self::has_legacy_credential($request)) {
-            return self::error(
-                'legacy_visitor_credential_not_supported',
-                __('Visitor credentials must be supplied by the server-owned cookie.', 'wp-aigent'),
-                400
-            );
-        }
-
         $identity = WP_AIGent_Visitor_Identity::current();
         if ($identity === null) {
             return self::error(
@@ -219,12 +202,6 @@ class AI_Chatbot_Chat_API {
         return esc_url_raw(substr((string) $value, 0, 2048));
     }
 
-    private static function has_legacy_credential(WP_REST_Request $request): bool {
-        return $request->has_param('visitor_id')
-            || $request->has_param('visitor_token')
-            || $request->get_header('X-WP-AIGent-Visitor-Token') !== '';
-    }
-
     private static function string_param(WP_REST_Request $request, string $key): string {
         $value = $request->get_param($key);
         return is_scalar($value) ? trim((string) $value) : '';
@@ -245,6 +222,25 @@ class AI_Chatbot_Chat_API {
 
         set_transient($key, (int) $count + 1, $window);
         return false;
+    }
+
+    /** Issue a new identity subject to the public per-IP issuance limit. */
+    private static function issue_visitor_identity(int $now): array|WP_REST_Response {
+        $client_ip = WP_AIGent_Bootstrap::get_client_ip();
+        if (self::is_rate_limited(
+            'visitor_issue_ip',
+            $client_ip,
+            (int) WP_AIGent_Security_Settings::get('visitor_issue_limit'),
+            (int) WP_AIGent_Security_Settings::get('visitor_issue_window')
+        )) {
+            return self::error(
+                'visitor_issue_rate_limited',
+                __('Too many new visitor identities. Please try again later.', 'wp-aigent'),
+                429
+            );
+        }
+
+        return WP_AIGent_Visitor_Identity::issue($now);
     }
 
     private static function error(string $code, string $message, int $status): WP_REST_Response {

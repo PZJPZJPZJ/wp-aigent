@@ -110,6 +110,7 @@
             this.hasHistory = false;
             this.timers = [];
             this.destroyed = false;
+            this.offlineMessageShown = false;
 
             this.init();
         }
@@ -172,16 +173,20 @@
                 }
             }
 
+            var identityReady = this.isEditor;
             if (!this.isEditor) {
+                identityReady = true;
                 try {
                     await this.prepareSession();
                     await this.loadHistory();
                 } catch (error) {
+                    identityReady = false;
                     console.error('Visitor identity error:', error);
+                    this.showOfflineMessage();
                 }
             }
 
-            if (!this.destroyed && !this.hasHistory && this.config.greeting) {
+            if (!this.destroyed && !this.hasHistory && this.config.greeting && (this.isEditor || identityReady)) {
                 this.addMessage('bot', this.config.greeting);
             }
         }
@@ -219,6 +224,15 @@
                 if (res.status === 401 && allowCredentialRetry) {
                     await this.prepareSession(true);
                     return this.loadHistory(false);
+                }
+
+                if (!data.ok) {
+                    console.warn('Chat history API error:', {
+                        status: res.status,
+                        code: data.code || '',
+                        message: data.message || '',
+                    });
+                    return;
                 }
 
                 if (data.ok && data.data) {
@@ -390,7 +404,8 @@
 
         async sendMessage(text) {
             if (!this.apiUrl || !window.AIChatBotGlobals) {
-                this.addMessage('bot', 'Sorry, the chat endpoint is not available.');
+                console.error('Chat endpoint is not available.');
+                this.showOfflineMessage();
                 return;
             }
 
@@ -405,19 +420,24 @@
                 this.hideTyping();
 
                 if (data.ok) {
+                    this.offlineMessageShown = false;
                     this.addMessage('bot', data.data.reply);
                     if (data.data.should_collect_contact && !this.contactShown) {
                         this.contactShown = true;
                         this.showContactForm();
                     }
                 } else {
-                    console.warn('API error:', data.message || data.code);
-                    this.addMessage('bot', 'Sorry: ' + (data.message || 'Request failed.'));
+                    console.warn('Chat API error:', {
+                        status: result.status,
+                        code: data.code || '',
+                        message: data.message || '',
+                    });
+                    this.showOfflineMessage();
                 }
             } catch (err) {
                 console.error('Chat fetch error:', err);
                 this.hideTyping();
-                this.addMessage('bot', 'Sorry, a network error occurred. Please try again.');
+                this.showOfflineMessage();
             }
         }
 
@@ -445,7 +465,17 @@
                 return this.requestChat(text, false);
             }
 
-            return { data: data };
+            return { status: res.status, data: data };
+        }
+
+        showOfflineMessage() {
+            var message = typeof this.config.offline_msg === 'string'
+                ? this.config.offline_msg.trim()
+                : '';
+            if (!message || this.offlineMessageShown || this.destroyed) return;
+
+            this.offlineMessageShown = true;
+            this.addMessage('bot', message);
         }
 
         createMessageElement(role, content) {

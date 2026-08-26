@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [2.0.8] - 2026-08-26
+
+### Changed
+
+- Chat在缺少、过期或签名无效的Visitor Cookie时，先执行每IP签发限流，再由服务端生成全新UUID和HttpOnly Cookie，并继续处理当前消息；无需客户端先完成独立身份请求。
+- 为兼容仍被页面缓存、CDN或浏览器加载的旧Widget，Chat和History忽略请求中的废弃`visitor_id`、`visitor_token`及Token Header。这些值不能认领旧身份，服务端始终以有效Cookie或新签发身份为准。
+- 前端所有技术错误只写入浏览器控制台；聊天框只显示Chatbot配置的Offline Message，未配置时不添加错误气泡。
+
+### Fixed
+
+- 修复新版PHP与缓存旧JavaScript混跑时，用户看到“Visitor credentials must be supplied by the server-owned cookie”并无法继续聊天的问题。
+- 修复端点缺失、HTTP/API错误和网络异常时向访客直接显示内部错误文本，以及身份初始化失败后仍显示正常Greeting的问题。
+
+### Security
+
+- 兼容旧请求时只丢弃客户端身份字段，不恢复客户端UUID授权；旧UUID仍不能读取历史或关联原Conversation。
+
 ## [2.0.7] - 2026-08-26
 
 ### Changed

@@ -259,7 +259,7 @@ Each chatbot configures an independent primary Provider/model pair and an option
 |------|------|------|------|
 | `chatbot_id` | int | 是 | 已发布 Chatbot 的 ID |
 
-Chat 与 History 缺少有效 Cookie 时返回 HTTP 401 和 `visitor_credential_required`。旧的无签名 Visitor ID、`visitor_token` 参数和 `/ai-chat/v1/...` 路由不再受支持。
+Chat缺少有效Cookie时会在签发限流通过后由服务端创建新身份并继续当前消息；History缺少有效Cookie时返回HTTP 401和`visitor_credential_required`。请求中的旧无签名Visitor ID和`visitor_token`会被忽略且不能认领历史身份；`/ai-chat/v1/...` 路由不再受支持。
 
 ---
 
