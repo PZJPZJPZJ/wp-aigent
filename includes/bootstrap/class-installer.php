@@ -18,12 +18,10 @@ class WP_AIGent_Installer {
         require_once WP_AIGENT_PATH . 'includes/modules/knowledge/class-cpt-knowledge.php';
         require_once WP_AIGENT_PATH . 'includes/modules/conversations/class-cpt-conversation.php';
         require_once WP_AIGENT_PATH . 'includes/modules/knowledge/class-knowledge-indexer.php';
-        require_once WP_AIGENT_PATH . 'includes/modules/forms/class-form-analysis-schema.php';
         AI_Chatbot_CPT_Provider::register();
         AI_Chatbot_CPT_Chatbot::register();
         AI_Chatbot_CPT_Knowledge::register();
         AI_Chatbot_CPT_Conversation::register();
         AI_Chatbot_Knowledge_Indexer::install();
-        WP_AIGent_Form_Analysis_Schema::install();
     }
 }

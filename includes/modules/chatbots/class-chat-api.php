@@ -109,7 +109,7 @@ class AI_Chatbot_Chat_API {
             $chatbot_id,
             $message,
             $identity['visitor_id'],
-            self::metadata($request),
+            self::metadata($request, $identity['visitor_id']),
             $client_ip
         );
 
@@ -181,17 +181,25 @@ class AI_Chatbot_Chat_API {
         return $response;
     }
 
-    private static function metadata(WP_REST_Request $request): array {
+    private static function metadata(WP_REST_Request $request, string $visitor_id): array {
         $metadata = $request->get_param('metadata');
         $metadata = is_array($metadata) ? $metadata : [];
 
-        return [
+        $normalized = [
             'page'     => self::url_value($metadata['page'] ?? ''),
             'referrer' => self::url_value($metadata['referrer'] ?? ''),
             'language' => isset($metadata['language']) && is_scalar($metadata['language'])
                 ? substr(sanitize_text_field((string) $metadata['language']), 0, 32)
                 : '',
         ];
+        $attribution = WP_AIGent_Attribution_Sanitizer::sanitize($metadata['attribution'] ?? null, $visitor_id);
+        if ($attribution !== null) {
+            $attribution['event']['type'] = 'chat_message';
+            $attribution['event']['lead_event_id'] = '';
+            $normalized['attribution'] = $attribution;
+        }
+
+        return $normalized;
     }
 
     private static function url_value($value): string {

@@ -21,6 +21,9 @@ class AI_Chatbot_Chat_Service {
             ]
         );
         update_post_meta($conversation_id, 'conversation_last_activity', time());
+        if (!empty($metadata['attribution']) && is_array($metadata['attribution'])) {
+            AI_Chatbot_CPT_Conversation::save_attribution($conversation_id, $metadata['attribution']);
+        }
 
         $visitor_data = [
             'ip'       => $client_ip,

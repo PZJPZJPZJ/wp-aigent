@@ -4,6 +4,33 @@
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-08-27
+
+### Added
+
+- 新增默认关闭的Lead Attribution设置，支持90天滚动保留、Journey数量、排除路径、可选dataLayer成功事件和现有国家区号开关。
+- 新增共享`wp_aigent_browser_state`前端资产；Chat与Attribution复用同一状态实现，并在Chat确认身份后保存公开Visitor ID的确认时间和到期时间。
+- 新增First/Last Touch、UTM、GCLID/WBRAID/GBRAID、外部Referrer和pathname Journey采集；归因只在Elementor专用Hidden字段提交或Chat消息metadata中发送。
+- 新增服务端Attribution白名单校验、12KiB上限、Conversation当前归因投影和只读后台展示。
+
+### Changed
+
+- **重大决定：以单监听器浏览器归因取代Form AI分析。** 背景是旧能力依赖Elementor Pro Submission表、三张自有分析表、后台批处理Job和模型调用，运行边界较重且不能形成标准Interaction。最终方案默认关闭归因，每页只同步更新一次统一localStorage，并仅注册一个捕获阶段submit监听器；管理员必须预先添加非必填`wp_aigent_attribution` Hidden字段。未采用自动创建字段、MutationObserver、focus/pointer监听、Form侧Visitor网络请求或Elementor服务端Record修改，以保证脚本、存储或配置异常时原提交不阻塞。
+- Form侧Visitor ID改为可选关联值：只读取Chat已经确认且公开到期时间未结束的localStorage UUID，不为Form请求身份，不参与授权、计费、反欺诈或Customer自动合并。
+- Chat在现有`metadata.attribution`中附加快照；服务端始终以Cookie身份覆盖客户端Visitor ID，无效归因只被丢弃，不影响AI回复。
+- 国家区号字段的Elementor注册、Cloudflare检测、默认国家降级和服务端格式化保持不变，启用值在新设置保存前兼容读取旧`elementor_enabled`。
+- 旧Form分析表`aigent_form_analyses`、`aigent_form_analysis_jobs`、`aigent_form_analysis_job_items`、Schema Version和旧option原样保留但停止读取、写入和升级，以支持回滚；部署后需清理WordPress、Nginx和Cloudflare缓存，回滚时恢复`2.0.8`插件文件并再次清理缓存即可重新读取旧数据。
+
+### Removed
+
+- 移除AI Forms和Submissions后台入口、Form Analysis Schema安装、Job、Repository、Normalizer、AI Service、Elementor Submission Adapter、AJAX Controller及专属后台资源。
+- 插件不再读取Elementor Submission表，也不再调用模型分析Form Submission。
+
+### Security
+
+- 归因禁止采集完整query、hash、页面正文、表单输入、PII、IP、User Agent、Cookie签名或Token；表单和dataLayer中的前端字段始终视为不可信营销数据。
+- Chat归因经过服务端schema、类型、日期、path、URL、Journey和大小校验，不进入AI Prompt、Knowledge、通知正文、错误日志或公共REST响应。
+
 ## [2.0.8] - 2026-08-26
 
 ### Changed

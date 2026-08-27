@@ -4,11 +4,11 @@
 
 ## 项目定位
 
-WP AIgent 是一个面向 WordPress 的 AI 客情管理插件。当前提供多平台 AI Provider、Elementor 聊天机器人、知识库问答、对话与线索记录、邮件/企业微信通知、Elementor 国家区号字段，以及按筛选结果手动分析 Elementor Submission 的能力。
+WP AIgent 是一个面向 WordPress 的 AI 客情管理插件。当前提供多平台 AI Provider、Elementor 聊天机器人、知识库问答、对话与线索记录、邮件/企业微信通知、Elementor 国家区号字段，以及低侵入式浏览器询盘归因。
 
 长期目标不是堆叠相互独立的 AI 工具，而是以 Visitor、Interaction 和 Customer 为主线，将 Chat、Form 及未来邮件、商城、CRM 等渠道统一转换为客户互动，通过确定性规则与 AI 提取可追溯事实，形成标准 Customer Profile，再驱动生命周期、统计、跟进和自动化。
 
-**运行要求**：WordPress 6.7+、PHP 8.0+。聊天组件和 Elementor Forms Integration 依赖 Elementor；Submission 分析依赖 Elementor Pro 的 Submission 数据表。
+**运行要求**：WordPress 6.7+、PHP 8.0+。聊天组件、国家区号字段和表单Hidden归因接入依赖 Elementor；插件不再读取Elementor Submission数据表。
 
 ## 实现状态说明
 
@@ -28,13 +28,12 @@ includes/
 │   └── class-installer.php
 ├── core/                            # 不依赖具体业务模块
 │   ├── ai/                          # [部分实现] AI Client、Token Usage；目标为共享 AI Gateway
-│   ├── contracts/                   # [部分实现] 当前包含 Form Submission Source 契约
 │   ├── identity/                    # [部分实现] 全局 Visitor ID 与后台签发凭证
 │   ├── jobs/                        # [未实现] Job、重试、锁与执行器
 │   ├── database/                    # [未实现] 通用事务、分页与数据库能力
 │   ├── http/                        # [未实现] REST 响应、权限、限流与校验基础设施
 │   ├── security/                    # [部分实现] 当前拥有全局 Security 设置
-│   ├── attribution/                 # [未实现] 标准 UTM、referrer、click ID 模型
+│   ├── attribution/                 # [部分实现] 浏览器归因设置、服务端校验和前端装配
 │   ├── events/                      # [未实现] 领域事件分发与事件名称约束
 │   └── support/                     # [未实现] 少量真正通用的值对象与纯函数
 ├── modules/
@@ -42,7 +41,7 @@ includes/
 │   ├── chatbots/                    # [部分实现] Chatbot CPT、Prompt 和同步 Chat REST
 │   ├── knowledge/                   # [已实现] 文档 CPT、索引、路由和检索
 │   ├── conversations/               # [部分实现] Conversation CPT、消息和摘要
-│   ├── forms/                       # [部分实现] 配置、国家数据、手动 Submission 分析
+│   ├── forms/                       # [已实现] 国家与国际区号数据
 │   ├── intelligence/                # [部分实现] 当前仅有 Chat 结构化 Lead 解析
 │   ├── notifications/               # [部分实现] 规则、邮件、企业微信和闲置 Cron
 │   ├── interactions/                # [未实现] 所有渠道的标准 Interaction 入口
@@ -50,15 +49,14 @@ includes/
 │   ├── lifecycle/                   # [未实现] Lead 阶段、负责人、标签和跟进
 │   └── analytics/                   # [未实现] 聚合读模型、漏斗、趋势和 AI 用量统计
 ├── integrations/
-│   ├── elementor/                   # [已实现] Widget、Forms 字段、Submission 只读 Adapter
+│   ├── elementor/                   # [已实现] Widget和国家区号Forms字段
 │   ├── wordpress/                   # [部分实现] 当前包含 GitHub 更新器
 │   ├── channels/                    # [未实现] Email、WeCom 等独立通知渠道 Adapter
 │   └── marketing/                   # [未实现] Google Ads、Meta、CRM 等 Adapter
 └── admin/
     ├── chatbots/                    # [已实现] Assets、AJAX 和列表列
     ├── conversations/               # [已实现] 对话导出
-    ├── forms/                       # [已实现] Forms 设置、分析页面与 AJAX
-    ├── menu/                        # [未实现] AIgent 菜单和顺序的统一所有者
+    ├── menu/                        # [部分实现] 当前拥有Security与Lead Attribution设置页
     ├── rest/                        # [未实现] 统一后台 REST Controller
     └── shared/                      # [未实现] 后台共用表格、筛选和状态组件
 assets/
@@ -78,10 +76,11 @@ CHANGELOG.md                         # 变更日志、重大决定、兼容与�
 | Providers | 已实现 | Provider CPT、协议、URL、加密 API Key、模型列表 | 继续作为连接唯一所有者；消费者不得读取 Provider postmeta |
 | Chatbots | 部分实现 | Chatbot 配置、Prompt、同步聊天 API、Lead JSON | 应只拥有聊天体验与 Prompt 策略，并发布标准 Chat Interaction |
 | Knowledge | 已实现 | Markdown 文档、Card、Chunk 索引、候选路由与检索 | 后续补齐引用、索引 Job、失败恢复与版本化 |
-| Conversations | 部分实现 | Conversation CPT、Visitor 关联、消息、摘要、Token Usage | 高频消息应迁往独立表，并向 Interactions 发布标准互动 |
-| Forms | 部分实现 | 国家区号字段、只读 Submission 扫描、本地标准化、手动需求总结 | 应产生 Form Interaction，不建立独立客户画像；分析任务应迁入通用 Jobs |
+| Conversations | 部分实现 | Conversation CPT、Visitor关联、消息、摘要、Token Usage、当前归因投影 | 高频消息应迁往独立表，并向Interactions发布标准互动 |
+| Forms | 部分实现 | 国家区号字段、可选Hidden归因JSON | 应产生标准Form Interaction，不建立独立客户画像 |
 | Intelligence | 部分实现 | 解析 Chat 模型的结构化 JSON | 应拥有 Schema、Fact、Evidence、置信度、提取版本和 Profile 投影 |
 | Notifications | 部分实现 | 分组规则、Email、WeCom、闲置 Cron | 应消费领域事件；渠道协议迁至 `integrations/channels`，投递记录可重试 |
+| Attribution（Core） | 部分实现 | Browser State、First/Last Touch、Journey、Chat投影 | 后续作为标准Interaction attribution值对象，不直接拥有Customer Profile |
 | Interactions | 未实现 | 无 | 拥有所有渠道标准互动、原始快照、来源映射和幂等 Intake |
 | Customers | 未实现 | 无 | 拥有 Customer Profile、Identity Link、合并、拆分和人工确认值 |
 | Lifecycle | 未实现 | 无 | 拥有 Lead 阶段、有效性、负责人、标签、跟进和业务状态 |
@@ -111,26 +110,26 @@ assets/modules/chatbots/js/widget.js
 
 当前缺口：尚未产生标准 Interaction；AI、通知和摘要仍可能处于前台同步请求；Conversation 与 Lead 仍使用 CPT/postmeta；尚未形成 Customer Fact 和 Customer Profile。
 
-### Elementor Form 分析链路（已实现，部分达到目标）
+### 浏览器归因与Elementor Form链路（已实现，低侵入）
 
 ```text
-管理员筛选 Elementor Submission 并点击“更新分析”或“覆盖分析”
-  → 分批扫描全部筛选结果并创建固定 Job Item 快照
-  → Elementor Submission Source Adapter 只读加载原始记录
-  → 对完整 Submission 副本执行本地敏感信息模糊化
-  → Provider 模型分析需求、垃圾邮件和客户意图
-  → 仅按 Elementor submission_id 保存 WP AIgent 自有分析结果
+页面加载
+  → 读取UTM、click ID、外部Referrer和pathname白名单
+  → 写入wp_aigent_browser_state.preferences.attribution
+Elementor Form submit
+  → 唯一捕获阶段submit监听器查找wp_aigent_attribution Hidden字段
+  → 字段存在时同步填入可选归因JSON；不存在或异常时立即退出
+AI Chat submit
+  → 在现有metadata.attribution中附加快照
+  → 服务端白名单校验后保存Conversation当前归因投影
 ```
 
-- 不修改 Elementor Submission、字段、状态或已读标记。
-- 不通过 Elementor Hook、页面加载或 WP Cron 自动开始分析。
-- Elementor `submission_id` 唯一；AIgent 不复制提交时间、来源 URL、联系方式、标准化副本或完整 LLM JSON。
-- “更新分析”在创建快照时批量标记并跳过已成功记录，重试未分析、失败、待处理和过期执行记录；“覆盖分析”重新处理全部筛选结果。
-- 模型可接收表单、页面、Campaign 和全部字段的脱敏副本；不得接收本地原始联系方式。
-- `Submissions` 后台入口以 Elementor 为唯一列表数据源，使用 WordPress 原生列表表格，固定显示原始 ID、Email、Form、Page URL、Submission Date，并追加 Requirements、Spam、Intent、Analysis Status。
-- 默认筛选最近 30 天并按 Submission Date 倒序；搜索、Form、Page URL、日期、Spam、Intent 和 Analysis Status 会共同限定列表及分析任务。
-- Elementor 原记录删除后，AIgent 对应孤儿结果会在列表查询或任务创建前分批清理。
-- 当前结果尚未写入标准 Interaction、Customer Fact 或 Customer Profile，这些能力未实现。
+- 归因默认关闭，只使用统一localStorage键，不在浏览期间上传归因。
+- 表单必须由管理员添加非必填`wp_aigent_attribution` Hidden字段；插件不自动创建字段、不读取其他输入、不阻止或延迟提交。
+- Form侧不请求Visitor ID，只在Browser State已有已确认且未过期公开UUID时携带；该值不得用于授权或身份认定。
+- 页面归因只记录白名单参数和path，不保存完整query、hash、表单内容或PII。
+- 原Form AI分析代码和菜单已移除；旧三张分析表及option保留为不可写的回滚数据，不再安装或升级。
+- 当前Form和Chat归因尚未写入标准Interaction、Customer Fact或Customer Profile。
 
 ## 产品架构主线
 
@@ -298,7 +297,7 @@ Interaction Created
 - 事件 Payload 只传稳定 ID 和必要上下文，不传大型对象或可变内部实例。
 - 消费者失败不能回滚已成功的主业务写入。
 
-当前 Forms 有模块自有的手动分析任务表，Notifications 有闲置 Cron，但二者尚未迁移到通用 Job 基础设施。
+当前Notifications仍有闲置Cron；浏览器归因不创建业务Job。
 
 ## 数据与 Schema 规则
 
@@ -365,13 +364,13 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - Provider API Key 使用 WordPress salts 派生密钥进行 AES-256-CBC 加密存储。
 - Visitor ID 必须由后台使用密码学安全随机源签发，不得用于登录认证、后台授权或直接认定真实用户；Chat 与 History 只能信任由服务端验证的 Visitor Cookie。
 - Visitor 凭证使用 Host-only、HttpOnly、SameSite=Lax Cookie；HTTPS 下必须同时使用 Secure 与 `__Host-` 前缀。凭证不得进入 URL、JSON、localStorage、日志或 Prompt。
-- 浏览器持久化统一使用 version 2 的 `wp_aigent_browser_state`：`{ version, visitor_id, preferences }`。这里只保存公开 Visitor ID 和 UI 偏好，新功能只能在 `preferences` 下增加作用域，禁止新建独立 localStorage key。
+- 浏览器持久化统一使用 version 2 的 `wp_aigent_browser_state`：`{ version, visitor_id, preferences }`。这里只保存公开Visitor ID、UI偏好和获准的归因白名单；新功能只能在`preferences`下增加作用域，禁止新建独立localStorage key。
 - Visitor Cookie 采用 90 天滚动有效期，剩余 15 天内访问时续签同一 Visitor ID；缺失、过期、签名错误或被篡改的旧身份必须重新签发，不能访问原身份的历史对话。
 - 插件不实施严格同源 Origin 校验，也不输出通配凭据 CORS；可信子域名访问必须由部署方在 WordPress、Web Server 或反向代理中配置明确 CORS，并使用带凭据请求。
 - REST/AJAX 必须执行 Capability、nonce、输入校验和限流。
 - 客户端 IP 读取使用 Security 设置中的部署模式：源服务器读取 `REMOTE_ADDR`；服务器反代只在可信代理 CIDR 后解析 `X-Forwarded-For`/`X-Real-IP`；Cloudflare 只在官方网络或额外可信 CIDR 后读取 `CF-Connecting-IP`。不得无条件信任客户端 Header。
 - Prompt 与日志不得包含 API Key、密码、IP、User Agent 等无业务必要的敏感数据。
-- Forms 模型调用可以发送完整 Submission 的脱敏副本；姓名、邮箱、电话、WhatsApp、公司等敏感值必须先在本地模糊化，原始联系方式不得发送。
+- 浏览器归因只允许UTM、click ID、外部Referrer origin/path和站内pathname白名单；不得读取或发送表单输入、页面正文或PII。
 - 后台显示个人信息必须受 Capability 和隐私策略控制。
 - 重要任务必须有状态、错误摘要和人工重试入口，不能只依赖 PHP error log。
 

@@ -1,6 +1,6 @@
 # WP AIgent
 
-WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbots, answer visitor questions from your knowledge base, capture leads, send notifications, and enhance forms with AI-ready visitor context.
+WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI chatbots, knowledge-base answers, lead capture, notifications, low-intrusion browser attribution, and an Elementor country-code field.
 
 [![PHP](https://img.shields.io/badge/PHP-8.0+-%23777BB4.svg)](https://php.net)
 [![WordPress](https://img.shields.io/badge/WordPress-6.7+-%2321759B.svg)](https://wordpress.org)
@@ -76,10 +76,26 @@ WP AIgent is an all-in-one AI toolkit for WordPress. It helps you run AI chatbot
 
 ### 🔌 Integration
 - **Elementor widget** — drag-and-drop integration with any Elementor page
-- **AI Forms** — adds a Country Code field type to Elementor Forms with CF-IPCountry detection
+- **Lead attribution** — optional First/Last Touch and Journey JSON for explicitly configured Elementor Hidden fields
+- **Country Code field** — retained Elementor field type with CF-IPCountry detection and safe default fallback
 - **REST API** — versionless `/ai-chat/visitor`, `/ai-chat/chat`, and `/ai-chat/history` endpoints
 - **Auto-update** — GitHub Release updater built-in (Update URI support)
 - **i18n-ready** — full text domain with customizable UI strings (title, subtitle, placeholder)
+
+### Elementor表单归因配置
+
+归因默认关闭。启用后，插件只在统一的`wp_aigent_browser_state`中记录UTM、Google click ID、外部Referrer和pathname，不在浏览期间上传数据。
+
+每个需要归因的Elementor Form必须手动添加：
+
+| 配置 | 值 |
+|------|----|
+| Field Type | `Hidden` |
+| Field ID | `wp_aigent_attribution` |
+| Required | No |
+| Default Value | 空 |
+
+表单提交时，唯一的捕获阶段submit监听器只填写这个已存在的字段。不配置字段、localStorage不可用或归因损坏时，插件立即退出，不阻止或延迟Elementor原始提交。表单不会为Visitor ID发起网络请求；只有Chat已经确认过服务端Visitor身份时才可能携带公开UUID。
 
 ---
 
@@ -249,7 +265,7 @@ Each chatbot configures an independent primary Provider/model pair and an option
 |------|------|------|------|
 | `chatbot_id` | int | 是 | 已发布 Chatbot 的 ID |
 | `message` | string | 是 | 消息文本，长度受 Security 设置限制 |
-| `metadata` | object | 否 | Page URL、referrer 和 language |
+| `metadata` | object | 否 | Page URL、referrer、language和可选attribution快照 |
 
 ### POST `/ai-chat/history`
 

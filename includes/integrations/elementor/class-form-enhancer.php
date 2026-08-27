@@ -11,16 +11,14 @@ class WP_AIGent_Elementor_Form_Enhancer {
     }
 
     public function enqueue_country_code_script(): void {
-        $settings = WP_AIGent_Forms_Module::get_settings();
-        if ($settings['elementor_enabled'] !== '1') return;
+        if ((string) WP_AIGent_Attribution_Settings::get('country_code_enabled') !== '1') return;
         $path = 'assets/modules/forms/js/country-code.js';
         $mtime = is_readable(WP_AIGENT_PATH . $path) ? filemtime(WP_AIGENT_PATH . $path) : false;
         wp_enqueue_script('wp-aigent-country-code', WP_AIGENT_URL . $path, [], $mtime ? (string) $mtime : WP_AIGENT_VERSION, ['strategy' => 'defer', 'in_footer' => true]);
     }
 
     public function register_country_code_field($fields_manager): void {
-        $settings = WP_AIGent_Forms_Module::get_settings();
-        if ($settings['elementor_enabled'] !== '1') {
+        if ((string) WP_AIGent_Attribution_Settings::get('country_code_enabled') !== '1') {
             return;
         }
 
@@ -38,8 +36,7 @@ class WP_AIGent_Elementor_Form_Enhancer {
     }
 
     public function format_country_code_submission($record, $ajax_handler = null): void {
-        $settings = WP_AIGent_Forms_Module::get_settings();
-        if ($settings['elementor_enabled'] !== '1' || !is_object($record) || !method_exists($record, 'get')) {
+        if ((string) WP_AIGent_Attribution_Settings::get('country_code_enabled') !== '1' || !is_object($record) || !method_exists($record, 'get')) {
             return;
         }
 

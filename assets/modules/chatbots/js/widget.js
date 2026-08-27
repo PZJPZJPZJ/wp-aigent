@@ -1,101 +1,11 @@
 (function() {
     'use strict';
 
-    const BROWSER_STATE_KEY = 'wp_aigent_browser_state';
-    const BrowserState = window.WPAIGentBrowserState || (function() {
-        var memoryState = { version: 2, visitor_id: '', preferences: {} };
-
-        function isObject(value) {
-            return value && typeof value === 'object' && !Array.isArray(value);
-        }
-
-        function normalize(value) {
-            value = isObject(value) ? value : {};
-            var preferences = isObject(value.preferences) ? Object.assign({}, value.preferences) : {};
-            if (isObject(preferences.identity)) {
-                preferences.identity = Object.assign({}, preferences.identity);
-                delete preferences.identity.visitor_token;
-                if (!Object.keys(preferences.identity).length) delete preferences.identity;
-            }
-            return {
-                version: 2,
-                visitor_id: typeof value.visitor_id === 'string' ? value.visitor_id : '',
-                preferences: preferences,
-            };
-        }
-
-        function read() {
-            try {
-                if (!window.localStorage) return memoryState;
-                var raw = localStorage.getItem(BROWSER_STATE_KEY);
-                if (!raw) return memoryState;
-                memoryState = normalize(JSON.parse(raw));
-            } catch (e) {}
-            return memoryState;
-        }
-
-        function write(state) {
-            memoryState = normalize(state);
-            try {
-                if (window.localStorage) {
-                    localStorage.setItem(BROWSER_STATE_KEY, JSON.stringify(memoryState));
-                }
-            } catch (e) {}
-            return memoryState;
-        }
-
-        function update(mutator) {
-            var state = read();
-            mutator(state);
-            return write(state);
-        }
-
-        function getPreference(scope, key, fallback) {
-            var preferences = read().preferences;
-            var values = isObject(preferences[scope]) ? preferences[scope] : {};
-            return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : fallback;
-        }
-
-        function setPreference(scope, key, value) {
-            update(function(state) {
-                if (!isObject(state.preferences[scope])) state.preferences[scope] = {};
-                state.preferences[scope][key] = value;
-            });
-        }
-
-        function removePreference(scope, key) {
-            update(function(state) {
-                if (!isObject(state.preferences[scope])) return;
-                delete state.preferences[scope][key];
-                if (!Object.keys(state.preferences[scope]).length) delete state.preferences[scope];
-            });
-        }
-
-        function clearLegacyStorage() {
-            try {
-                if (!window.localStorage) return;
-                for (var index = localStorage.length - 1; index >= 0; index--) {
-                    var key = localStorage.key(index);
-                    if (key === 'wp_aigent_visitor_id' || key === 'ai_chat_visitor' || /^(ai_chat_token_|ai_chat_sid_|ai_chat_open_)/.test(key || '')) {
-                        localStorage.removeItem(key);
-                    }
-                }
-            } catch (e) {}
-        }
-
-        return Object.freeze({
-            storageKey: BROWSER_STATE_KEY,
-            getVisitorId: function() { return read().visitor_id; },
-            setVisitorId: function(visitorId) {
-                update(function(state) { state.visitor_id = visitorId; });
-            },
-            getPreference: getPreference,
-            setPreference: setPreference,
-            removePreference: removePreference,
-            clearLegacyStorage: clearLegacyStorage,
-        });
-    })();
-    window.WPAIGentBrowserState = BrowserState;
+    const BrowserState = window.WPAIGentBrowserState;
+    if (!BrowserState) {
+        console.error('WP AIgent browser state is unavailable.');
+        return;
+    }
 
     class AIChatWidget {
         constructor(container, config) {
@@ -133,7 +43,7 @@
             }
             var credential = await window.wpAIgentVisitorCredentialPromise;
             this.visitorId = credential.visitor_id;
-            BrowserState.setVisitorId(this.visitorId);
+            BrowserState.setVisitorIdentity(this.visitorId, credential.credential_expires_at_gmt || '');
         }
 
         async requestVisitorCredential() {
@@ -442,6 +352,23 @@
         }
 
         async requestChat(text, allowCredentialRetry) {
+            var metadata = {
+                page: location.href,
+                referrer: document.referrer,
+                language: navigator.language,
+            };
+            if (window.WPAIGentAttribution && typeof window.WPAIGentAttribution.getSnapshot === 'function') {
+                try {
+                    var attribution = window.WPAIGentAttribution.getSnapshot('chat_message');
+                    var attributionJson = attribution ? JSON.stringify(attribution) : '';
+                    if (attributionJson && attributionJson.length <= 12288) {
+                        metadata.attribution = JSON.parse(attributionJson);
+                    }
+                } catch (error) {
+                    console.warn('WP AIgent attribution was omitted from this Chat request.', error);
+                }
+            }
+
             const res = await fetch(this.apiUrl, {
                 method: 'POST',
                 credentials: 'include',
@@ -451,11 +378,7 @@
                 body: JSON.stringify({
                     chatbot_id: this.config.chatbot_id,
                     message: text,
-                    metadata: {
-                        page: location.href,
-                        referrer: document.referrer,
-                        language: navigator.language,
-                    },
+                    metadata: metadata,
                 }),
             });
 
