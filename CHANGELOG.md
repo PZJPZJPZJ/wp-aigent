@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+## [2.0.13] - 2026-08-28
+
+### Changed
+
+- Elementor `wp_aigent_attribution` Hidden值从多行文本改为紧凑Journey JSON；每项强制path/time，source/referrer_url仅在检测到值时出现。
+- source/referrer改为逐页计算：UTM、Google click ID或站外Referrer产生字段，后续站内导航或直接刷新省略可选键；普通页面去重同时比较path、source和referrer_url。
+- `form_submit`与UUID event_id在捕获到原生submit时立即写回localStorage并进入Hidden JSON，明确表示提交尝试；验证失败、AJAX失败或网络失败仍会保留，dataLayer的`submit_success`才表示确认成功。
+- Chat与Conversation保留经过校验的Form事件；无效event_id只移除事件字段，不影响该Journey项目的path/time。
+- Conversation Attribution在Lead Data之后解析为动态列表格；Time/Path固定显示，Source、Referrer、Event和Event ID仅在对应列存在任意值时显示。
+- Journey limit最小值从1调整为2，以同时保留第一项来源记录和最新Form事件；2.0.9至2.0.12旧归因继续只读兼容。
+
+### Security
+
+- Hidden JSON、localStorage和Chat attribution继续不包含Visitor ID或schema；完整query风险与Excluded Path要求保持不变。
+
 ## [2.0.12] - 2026-08-28
 
 ### Fixed

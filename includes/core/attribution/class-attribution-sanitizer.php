@@ -18,7 +18,7 @@ class WP_AIGent_Attribution_Sanitizer {
         }
 
         $journey = [];
-        foreach ($input['journey'] as $index => $item) {
+        foreach ($input['journey'] as $item) {
             if (!is_array($item)) {
                 return null;
             }
@@ -30,13 +30,18 @@ class WP_AIGent_Attribution_Sanitizer {
             }
 
             $normalized = ['path' => $path, 'time' => $time];
-            if ($index === 0) {
-                $source = self::text($item['source'] ?? '', 120);
-                if ($source === '') {
-                    return null;
+            $source = self::text($item['source'] ?? '', 120);
+            $referrer = self::referrer($item['referrer_url'] ?? '');
+            if ($source !== '') $normalized['source'] = $source;
+            if ($referrer !== '') $normalized['referrer_url'] = $referrer;
+
+            $event = sanitize_key((string) ($item['event'] ?? ''));
+            if ($event === 'form_submit') {
+                $event_id = self::uuid($item['event_id'] ?? '');
+                if ($event_id !== '') {
+                    $normalized['event'] = $event;
+                    $normalized['event_id'] = $event_id;
                 }
-                $normalized['source'] = $source;
-                $normalized['referrer_url'] = self::referrer($item['referrer_url'] ?? '');
             }
             $journey[] = $normalized;
         }
@@ -48,6 +53,13 @@ class WP_AIGent_Attribution_Sanitizer {
 
     private static function text($value, int $length): string {
         return is_scalar($value) ? substr(sanitize_text_field((string) $value), 0, $length) : '';
+    }
+
+    private static function uuid($value): string {
+        $value = is_scalar($value) ? strtolower(trim((string) $value)) : '';
+        return preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/', $value)
+            ? $value
+            : '';
     }
 
     private static function timestamp($value): string {

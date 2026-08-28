@@ -90,7 +90,7 @@ class AI_Chatbot_CPT_Conversation {
         $lead_data    = get_post_meta($post->ID, 'conversation_lead_data', true);
         $attribution  = get_post_meta($post->ID, 'conversation_attribution', true);
         if (!is_array($attribution)) $attribution = [];
-        $attribution_lines = self::attribution_display_lines($attribution);
+        $attribution_view = self::attribution_view($attribution);
         $ip       = get_post_meta($post->ID, 'conversation_visitor_ip', true);
         $ua       = get_post_meta($post->ID, 'conversation_visitor_ua', true);
         $page_url = get_post_meta($post->ID, 'conversation_visitor_page_url', true);
@@ -132,42 +132,65 @@ class AI_Chatbot_CPT_Conversation {
         include WP_AIGENT_PATH . 'templates/modules/conversations/admin-meta-box.php';
     }
 
-    private static function attribution_display_lines(array $attribution): array {
-        $lines = [];
+    private static function attribution_view(array $attribution): array {
+        $rows = [];
         $journey = is_array($attribution['journey'] ?? null) ? $attribution['journey'] : [];
         $is_journey_only = !empty($journey[0]) && is_array($journey[0]) && array_key_exists('time', $journey[0]);
         if ($is_journey_only) {
-            foreach ($journey as $index => $item) {
+            foreach ($journey as $item) {
                 if (!is_array($item)) continue;
                 $time = (string) ($item['time'] ?? '');
                 $path = (string) ($item['path'] ?? '');
                 if ($time === '' || $path === '') continue;
-                $parts = [$time, $path];
-                if ($index === 0 && !empty($item['source'])) $parts[] = 'source=' . $item['source'];
-                if ($index === 0 && !empty($item['referrer_url'])) $parts[] = 'referrer=' . $item['referrer_url'];
-                $lines[] = implode(' | ', $parts);
+                $rows[] = [
+                    'time'         => $time,
+                    'path'         => $path,
+                    'source'       => (string) ($item['source'] ?? ''),
+                    'referrer_url' => (string) ($item['referrer_url'] ?? ''),
+                    'event'        => (string) ($item['event'] ?? ''),
+                    'event_id'     => (string) ($item['event_id'] ?? ''),
+                ];
             }
         }
 
         // Read-only compatibility for 2.0.9 First/Last Touch records.
         if (!$is_journey_only && !empty($attribution['first_touch']) && is_array($attribution['first_touch'])) {
             $first = $attribution['first_touch'];
-            $parts = [
-                (string) ($first['observed_at_gmt'] ?? $attribution['first_visit_at_gmt'] ?? ''),
-                (string) ($first['landing_path'] ?? '/'),
-                'source=' . (string) ($first['source'] ?? 'unknown'),
+            $rows[] = [
+                'time'         => (string) ($first['observed_at_gmt'] ?? $attribution['first_visit_at_gmt'] ?? ''),
+                'path'         => (string) ($first['landing_path'] ?? '/'),
+                'source'       => (string) ($first['source'] ?? ''),
+                'referrer_url' => (string) ($first['referrer_url'] ?? ''),
+                'event'        => '',
+                'event_id'     => '',
             ];
-            if (!empty($first['referrer_url'])) $parts[] = 'referrer=' . $first['referrer_url'];
-            $lines[] = implode(' | ', $parts);
             foreach ($journey as $item) {
                 if (!is_array($item)) continue;
                 $time = (string) ($item['observed_at_gmt'] ?? '');
                 $path = (string) ($item['path'] ?? '');
-                if ($time !== '' && $path !== '') $lines[] = $time . ' | ' . $path;
+                if ($time !== '' && $path !== '') {
+                    $rows[] = [
+                        'time' => $time, 'path' => $path, 'source' => '',
+                        'referrer_url' => '', 'event' => '', 'event_id' => '',
+                    ];
+                }
             }
         }
 
-        return $lines;
+        return [
+            'rows'          => $rows,
+            'show_source'   => self::attribution_column_has_value($rows, 'source'),
+            'show_referrer' => self::attribution_column_has_value($rows, 'referrer_url'),
+            'show_event'    => self::attribution_column_has_value($rows, 'event'),
+            'show_event_id' => self::attribution_column_has_value($rows, 'event_id'),
+        ];
+    }
+
+    private static function attribution_column_has_value(array $rows, string $key): bool {
+        foreach ($rows as $row) {
+            if ((string) ($row[$key] ?? '') !== '') return true;
+        }
+        return false;
     }
 
     public static function prevent_manual_edit(int $post_id, $post, bool $update): void {

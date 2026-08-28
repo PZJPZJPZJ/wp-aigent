@@ -114,7 +114,7 @@ class WP_AIGent_Settings_Page {
             <table class="form-table" role="presentation">
                 <?php $this->checkbox_row('tracking_enabled', __('Enable attribution tracking', 'wp-aigent'), $settings, __('Disabled by default. When enabled, one page-load update and one capture-phase submit listener maintain optional attribution. JavaScript or storage failure leaves the original form unchanged.', 'wp-aigent')); ?>
                 <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'retention_days', __('Retention days', 'wp-aigent'), $settings, 1, 365, __('Rolling browser retention for the Journey list. Choose a period allowed by your privacy policy.', 'wp-aigent')); ?>
-                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'journey_limit', __('Journey page limit', 'wp-aigent'), $settings, 1, 50, __('Maximum deduplicated paths retained. The first source/referrer entry is always preserved while older middle entries are trimmed.', 'wp-aigent')); ?>
+                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'journey_limit', __('Journey item limit', 'wp-aigent'), $settings, 2, 50, __('Maximum page and form-submit items retained. The first item and newest event are preserved while older middle items are trimmed.', 'wp-aigent')); ?>
                 <tr>
                     <th scope="row"><label for="wp-aigent-excluded-path-prefixes"><?php esc_html_e('Excluded path prefixes', 'wp-aigent'); ?></label></th>
                     <td>
@@ -133,7 +133,7 @@ class WP_AIGent_Settings_Page {
                 <tr><th><?php esc_html_e('Required', 'wp-aigent'); ?></th><td><?php esc_html_e('No', 'wp-aigent'); ?></td></tr>
                 <tr><th><?php esc_html_e('Default value', 'wp-aigent'); ?></th><td><?php esc_html_e('Empty', 'wp-aigent'); ?></td></tr>
             </tbody></table>
-            <p class="description"><?php esc_html_e('Forms without this field are not scanned or modified. The value is readable Journey text, not JSON. Forms never request, read, or submit WP AIgent Visitor ID; Chat identity remains protected by its HttpOnly cookie.', 'wp-aigent'); ?></p>
+            <p class="description"><?php esc_html_e('Forms without this field are not scanned or modified. The value is compact Journey JSON. Each submit attempt is written to browser storage before Elementor validation, so failed attempts remain recorded. Forms never request, read, or submit WP AIgent Visitor ID; Chat identity remains protected by its HttpOnly cookie.', 'wp-aigent'); ?></p>
 
             <h2><?php esc_html_e('Country code field', 'wp-aigent'); ?></h2>
             <table class="form-table" role="presentation">

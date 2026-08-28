@@ -84,7 +84,7 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 
 ### Elementor表单归因配置
 
-归因默认关闭。启用后，插件只在统一的`wp_aigent_browser_state`中记录Journey，不在浏览期间上传数据。第一条记录source和外部Referrer，后续记录完整`pathname + query`及时间。
+归因默认关闭。启用后，插件只在统一的`wp_aigent_browser_state`中记录Journey，不在浏览期间上传数据。每项必有path/time；只有检测到新获客来源或站外Referrer时才增加source/referrer_url。
 
 每个需要归因的Elementor Form必须手动添加：
 
@@ -95,7 +95,7 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 | Required | No |
 | Default Value | 空 |
 
-表单提交时，唯一的捕获阶段submit监听器只填写这个已存在的字段，值为每行一条的可读Journey文本。不配置字段、localStorage不可用或归因损坏时，插件立即退出，不阻止或延迟Elementor原始提交。localStorage和Form均不保存Visitor ID；Chat身份由HttpOnly Cookie独立管理。
+表单提交时，唯一的捕获阶段submit监听器先把`form_submit`和随机event_id写回Journey，再把紧凑JSON填入这个已存在的字段。该事件表示提交尝试，因此验证或网络失败也会保留。不配置字段、localStorage不可用或归因损坏时，插件立即退出，不阻止或延迟Elementor原始提交。localStorage和Form均不保存Visitor ID；Chat身份由HttpOnly Cookie独立管理。
 
 Journey会保留完整query参数。URL中如包含邮箱、Token、订单号、搜索内容或其他敏感数据，这些值也会进入localStorage及成功提交的Form、Email或CRM。启用前必须通过Excluded Path Prefixes排除敏感页面，并确保站点不把秘密放入URL。
 

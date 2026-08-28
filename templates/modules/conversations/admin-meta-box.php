@@ -11,7 +11,7 @@ defined('ABSPATH') || exit;
  * @var int     $msg_count
  * @var string  $started_at
  * @var mixed   $lead_data
- * @var array   $attribution_lines
+ * @var array   $attribution_view
  * @var string  $ip
  * @var string  $ua
  * @var string  $page_url
@@ -195,14 +195,31 @@ defined('ABSPATH') || exit;
     <?php endif; ?>
 
     <!-- Attribution -->
-    <?php if (!empty($attribution_lines)): ?>
+    <?php if (!empty($attribution_view['rows'])): ?>
     <div class="ai-conv-section">
         <h3><?php esc_html_e('Attribution', 'wp-aigent'); ?></h3>
-        <div style="padding:10px 12px;background:#f6f7f7;border:1px solid #dcdcde;">
-            <?php foreach ($attribution_lines as $attribution_line): ?>
-                <div style="margin-bottom:6px;word-break:break-word;"><code><?php echo esc_html($attribution_line); ?></code></div>
+        <table class="widefat striped">
+            <thead><tr>
+                <th><?php esc_html_e('Time', 'wp-aigent'); ?></th>
+                <th><?php esc_html_e('Path', 'wp-aigent'); ?></th>
+                <?php if ($attribution_view['show_source']): ?><th><?php esc_html_e('Source', 'wp-aigent'); ?></th><?php endif; ?>
+                <?php if ($attribution_view['show_referrer']): ?><th><?php esc_html_e('Referrer', 'wp-aigent'); ?></th><?php endif; ?>
+                <?php if ($attribution_view['show_event']): ?><th><?php esc_html_e('Event', 'wp-aigent'); ?></th><?php endif; ?>
+                <?php if ($attribution_view['show_event_id']): ?><th><?php esc_html_e('Event ID', 'wp-aigent'); ?></th><?php endif; ?>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($attribution_view['rows'] as $attribution_row): ?>
+                <tr>
+                    <td><?php echo esc_html($attribution_row['time']); ?></td>
+                    <td style="word-break:break-word;"><code><?php echo esc_html($attribution_row['path']); ?></code></td>
+                    <?php if ($attribution_view['show_source']): ?><td><?php echo esc_html($attribution_row['source']); ?></td><?php endif; ?>
+                    <?php if ($attribution_view['show_referrer']): ?><td style="word-break:break-word;"><?php echo esc_html($attribution_row['referrer_url']); ?></td><?php endif; ?>
+                    <?php if ($attribution_view['show_event']): ?><td><?php echo esc_html($attribution_row['event']); ?></td><?php endif; ?>
+                    <?php if ($attribution_view['show_event_id']): ?><td><code><?php echo esc_html($attribution_row['event_id']); ?></code></td><?php endif; ?>
+                </tr>
             <?php endforeach; ?>
-        </div>
+            </tbody>
+        </table>
     </div>
     <?php endif; ?>
 

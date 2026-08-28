@@ -77,7 +77,7 @@ CHANGELOG.md                         # 变更日志、重大决定、兼容与�
 | Chatbots | 部分实现 | Chatbot 配置、Prompt、同步聊天 API、Lead JSON | 应只拥有聊天体验与 Prompt 策略，并发布标准 Chat Interaction |
 | Knowledge | 已实现 | Markdown 文档、Card、Chunk 索引、候选路由与检索 | 后续补齐引用、索引 Job、失败恢复与版本化 |
 | Conversations | 部分实现 | Conversation CPT、Visitor关联、消息、摘要、Token Usage、当前归因投影 | 高频消息应迁往独立表，并向Interactions发布标准互动 |
-| Forms | 部分实现 | 国家区号字段、可选Hidden Journey文本 | 应产生标准Form Interaction，不建立独立客户画像 |
+| Forms | 部分实现 | 国家区号字段、可选Hidden Journey JSON | 应产生标准Form Interaction，不建立独立客户画像 |
 | Intelligence | 部分实现 | 解析 Chat 模型的结构化 JSON | 应拥有 Schema、Fact、Evidence、置信度、提取版本和 Profile 投影 |
 | Notifications | 部分实现 | 分组规则、Email、WeCom、闲置 Cron | 应消费领域事件；渠道协议迁至 `integrations/channels`，投递记录可重试 |
 | Attribution（Core） | 部分实现 | Browser State、Journey、Chat投影 | 后续作为标准Interaction attribution值对象，不直接拥有Customer Profile |
@@ -114,11 +114,11 @@ assets/modules/chatbots/js/widget.js
 
 ```text
 页面加载
-  → 读取首个source、外部Referrer和完整pathname + query
+  → 每页记录完整pathname + query；检测到新来源时附加source/referrer_url
   → 写入wp_aigent_browser_state.preferences.attribution
 Elementor Form submit
   → 唯一捕获阶段submit监听器查找wp_aigent_attribution Hidden字段
-  → 字段存在时同步填入每行一条的可读Journey文本；不存在或异常时立即退出
+  → 字段存在时先持久化form_submit事件，再同步填入紧凑Journey JSON；不存在或异常时立即退出
 AI Chat submit
   → 在现有metadata.attribution中附加快照
   → 服务端白名单校验后保存Conversation当前归因投影
@@ -127,6 +127,7 @@ AI Chat submit
 - 归因默认关闭，只使用统一localStorage键，不在浏览期间上传归因。
 - 表单必须由管理员添加非必填`wp_aigent_attribution` Hidden字段；插件不自动创建字段、不读取其他输入、不阻止或延迟提交。
 - Form侧不请求、读取或提交Visitor ID；Chat仍由HttpOnly Cookie关联可信Visitor。
+- 每个Journey项目必有path/time，source/referrer_url仅在有值时存在；form_submit/event_id在原生submit触发时写回localStorage，表示提交尝试而非确认成功。
 - 页面归因保存完整pathname + query并排除hash，不读取表单内容；query可能包含PII或Token，启用方必须排除敏感路径并确保URL不承载秘密。
 - 原Form AI分析代码和菜单已移除；旧三张分析表及option保留为不可写的回滚数据，不再安装或升级。
 - 当前Form和Chat归因尚未写入标准Interaction、Customer Fact或Customer Profile。
@@ -370,7 +371,7 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - REST/AJAX 必须执行 Capability、nonce、输入校验和限流。
 - 客户端 IP 读取使用 Security 设置中的部署模式：源服务器读取 `REMOTE_ADDR`；服务器反代只在可信代理 CIDR 后解析 `X-Forwarded-For`/`X-Real-IP`；Cloudflare 只在官方网络或额外可信 CIDR 后读取 `CF-Connecting-IP`。不得无条件信任客户端 Header。
 - Prompt 与日志不得包含 API Key、密码、IP、User Agent 等无业务必要的敏感数据。
-- 浏览器归因记录首个source、外部Referrer和完整pathname + query；不得读取表单输入或页面正文。完整query可能包含PII或Token，必须通过排除路径和站点URL规范控制风险。
+- 浏览器归因每页记录完整pathname + query，并在检测到获客来源或站外Referrer时附加可选source/referrer_url；不得读取表单输入或页面正文。完整query可能包含PII或Token，必须通过排除路径和站点URL规范控制风险。
 - 后台显示个人信息必须受 Capability 和隐私策略控制。
 - 重要任务必须有状态、错误摘要和人工重试入口，不能只依赖 PHP error log。
 
