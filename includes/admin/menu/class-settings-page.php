@@ -122,7 +122,16 @@ class WP_AIGent_Settings_Page {
                         <p class="description"><?php esc_html_e('One pathname prefix per line, such as /account or /checkout. Matching pages are neither recorded nor attached to forms or Chat.', 'wp-aigent'); ?></p>
                     </td>
                 </tr>
-                <?php $this->checkbox_row('data_layer_enabled', __('Push Elementor success event to dataLayer', 'wp-aigent'), $settings, __('Off by default. When enabled, a second optional listener pushes only form_id, lead_event_id, and page_path after Elementor reports success.', 'wp-aigent')); ?>
+                <?php $this->checkbox_row('data_layer_enabled', __('Push Elementor success event to dataLayer', 'wp-aigent'), $settings, __('Off by default and independent of browser attribution. When enabled, every successful Elementor Form pushes form_id and page_path; lead_event_id is added when valid attribution JSON exists.', 'wp-aigent')); ?>
+                <tr>
+                    <th scope="row"><label for="wp-aigent-data-layer-event-name"><?php esc_html_e('dataLayer event name', 'wp-aigent'); ?></label></th>
+                    <td>
+                        <input class="regular-text code" type="text" id="wp-aigent-data-layer-event-name" maxlength="80" pattern="[A-Za-z0-9_.-]+" name="<?php echo esc_attr(WP_AIGent_Attribution_Settings::OPTION_NAME); ?>[data_layer_event_name]" value="<?php echo esc_attr((string) $settings['data_layer_event_name']); ?>">
+                        <p class="description"><?php esc_html_e('The exact Custom Event name pushed to window.dataLayer. Create a matching GTM Custom Event Trigger; the default keeps existing elementor_form triggers working. The GA4 Event Tag should normally send generate_lead.', 'wp-aigent'); ?></p>
+                        <p><strong><?php esc_html_e('GTM Custom Event Trigger:', 'wp-aigent'); ?></strong> <code><?php echo esc_html((string) $settings['data_layer_event_name']); ?></code></p>
+                        <p class="description"><?php esc_html_e('Remove any existing submit_success Custom Code before enabling this option, otherwise each successful form will be counted twice.', 'wp-aigent'); ?></p>
+                    </td>
+                </tr>
             </table>
 
             <h2><?php esc_html_e('Elementor Form setup', 'wp-aigent'); ?></h2>

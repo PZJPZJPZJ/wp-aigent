@@ -11,6 +11,7 @@ class WP_AIGent_Attribution_Settings {
         'journey_limit'          => 20,
         'excluded_path_prefixes' => '',
         'data_layer_enabled'     => '0',
+        'data_layer_event_name'  => 'elementor_form',
         'country_code_enabled'   => '0',
     ];
 
@@ -26,6 +27,7 @@ class WP_AIGent_Attribution_Settings {
             }
         }
         $settings['journey_limit'] = max(2, min(50, (int) $settings['journey_limit']));
+        $settings['data_layer_event_name'] = self::sanitize_event_name($settings['data_layer_event_name'] ?? '');
 
         return $settings;
     }
@@ -51,6 +53,7 @@ class WP_AIGent_Attribution_Settings {
             'journey_limit'          => self::bounded_int($input, 'journey_limit', 2, 50),
             'excluded_path_prefixes' => self::sanitize_path_prefixes($input['excluded_path_prefixes'] ?? ''),
             'data_layer_enabled'     => !empty($input['data_layer_enabled']) ? '1' : '0',
+            'data_layer_event_name'  => self::sanitize_event_name($input['data_layer_event_name'] ?? ''),
             'country_code_enabled'   => !empty($input['country_code_enabled']) ? '1' : '0',
         ];
     }
@@ -76,5 +79,12 @@ class WP_AIGent_Attribution_Settings {
         }
 
         return implode("\n", array_values(array_unique($prefixes)));
+    }
+
+    private static function sanitize_event_name($value): string {
+        $value = is_scalar($value) ? substr(trim((string) $value), 0, 80) : '';
+        return $value !== '' && preg_match('/^[A-Za-z0-9_.-]+$/', $value)
+            ? $value
+            : self::DEFAULTS['data_layer_event_name'];
     }
 }

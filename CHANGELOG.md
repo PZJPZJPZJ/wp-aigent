@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-28
+
+### Added
+
+- Lead Attribution设置新增可配置dataLayer事件名，默认`elementor_form`，限制为80字符及字母、数字、下划线、点和短横线；非法或空值回退默认值。
+- Settings直接显示GTM Custom Event Trigger应监听的名称，并说明GA4 Event Tag建议发送`generate_lead`。
+
+### Changed
+
+- Elementor `submit_success`监听覆盖所有Elementor Form并可独立于Attribution Tracking启用；Tracking关闭时不加载Browser State依赖、不写localStorage且不注册原生submit监听器。
+- 每个成功Form始终向dataLayer推送event、form_id和page_path；存在合法`wp_aigent_attribution` JSON时额外加入lead_event_id，Hidden缺失、损坏或没有event_id时仍推基础Payload。
+- **重大决定：插件接管现有Elementor成功追踪代码。** 实现继续使用Elementor官方`submit_success` jQuery事件并只push dataLayer，不直接请求GA4。部署时保留现有GTM `elementor_form` Trigger并删除Elementor Custom Code、主题或GTM Custom HTML中的旧监听代码；两套Handler同时存在会重复统计。回滚到`2.0.13`时恢复旧代码或把GTM Trigger改回插件旧事件名`elementor_generate_lead`。
+
+### Security
+
+- dataLayer成功处理不读取用户输入、不修改验证或AJAX、不发起网络请求；Journey、source、Referrer和Visitor ID不会进入成功事件Payload。
+
 ## [2.0.13] - 2026-08-28
 
 ### Changed

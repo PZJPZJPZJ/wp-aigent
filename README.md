@@ -99,6 +99,16 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 
 Journey会保留完整query参数。URL中如包含邮箱、Token、订单号、搜索内容或其他敏感数据，这些值也会进入localStorage及成功提交的Form、Email或CRM。启用前必须通过Excluded Path Prefixes排除敏感页面，并确保站点不把秘密放入URL。
 
+### Elementor成功事件与GTM
+
+`Push Elementor success event to dataLayer`可独立于Attribution Tracking启用，使用Elementor官方`submit_success`事件覆盖所有Elementor Form。默认向dataLayer推送：
+
+```json
+{"event":"elementor_form","form_id":"contact-form","page_path":"/contact"}
+```
+
+配置了合法归因Hidden时额外包含`lead_event_id`。在GTM中创建Custom Event Trigger并填写后台显示的完全相同事件名；GA4 Event Tag建议发送`generate_lead`。启用插件开关前必须删除主题、Elementor Custom Code或GTM Custom HTML中的旧`submit_success`代码，否则会重复统计。
+
 ---
 
 ## Requirements

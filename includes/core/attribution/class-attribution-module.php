@@ -20,7 +20,9 @@ class WP_AIGent_Attribution_Module {
             );
         }
 
-        if ((string) WP_AIGent_Attribution_Settings::get('tracking_enabled') !== '1') {
+        $tracking_enabled = (string) WP_AIGent_Attribution_Settings::get('tracking_enabled') === '1';
+        $data_layer_enabled = (string) WP_AIGent_Attribution_Settings::get('data_layer_enabled') === '1';
+        if (!$tracking_enabled && !$data_layer_enabled) {
             return;
         }
 
@@ -28,15 +30,17 @@ class WP_AIGent_Attribution_Module {
         wp_enqueue_script(
             'wp-aigent-attribution',
             WP_AIGENT_URL . $attribution_path,
-            ['wp-aigent-browser-state'],
+            $tracking_enabled ? ['wp-aigent-browser-state'] : [],
             $this->asset_version($attribution_path),
             ['strategy' => 'defer', 'in_footer' => true]
         );
         wp_localize_script('wp-aigent-attribution', 'wpAIgentAttributionConfig', [
+            'trackingEnabled'      => $tracking_enabled,
             'retentionDays'        => (int) WP_AIGent_Attribution_Settings::get('retention_days'),
             'journeyLimit'         => (int) WP_AIGent_Attribution_Settings::get('journey_limit'),
             'excludedPathPrefixes' => WP_AIGent_Attribution_Settings::excluded_path_prefixes(),
-            'dataLayerEnabled'     => (string) WP_AIGent_Attribution_Settings::get('data_layer_enabled') === '1',
+            'dataLayerEnabled'     => $data_layer_enabled,
+            'dataLayerEventName'   => (string) WP_AIGent_Attribution_Settings::get('data_layer_event_name'),
         ]);
     }
 

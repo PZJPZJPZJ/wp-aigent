@@ -122,6 +122,9 @@ Elementor Form submit
 AI Chat submit
   → 在现有metadata.attribution中附加快照
   → 服务端白名单校验后保存Conversation当前归因投影
+Elementor submit_success（可独立开启）
+  → 所有Elementor Form向dataLayer推送后台配置的事件名
+  → 有合法归因Hidden时附加lead_event_id，否则仍推基础事件
 ```
 
 - 归因默认关闭，只使用统一localStorage键，不在浏览期间上传归因。
@@ -131,6 +134,7 @@ AI Chat submit
 - 页面归因保存完整pathname + query并排除hash，不读取表单内容；query可能包含PII或Token，启用方必须排除敏感路径并确保URL不承载秘密。
 - 原Form AI分析代码和菜单已移除；旧三张分析表及option保留为不可写的回滚数据，不再安装或升级。
 - 当前Form和Chat归因尚未写入标准Interaction、Customer Fact或Customer Profile。
+- dataLayer成功事件默认关闭并可在Tracking关闭时独立运行；默认事件名为`elementor_form`，GTM Custom Event Trigger必须精确匹配，旧自定义监听代码必须删除以避免重复。
 
 ## 产品架构主线
 

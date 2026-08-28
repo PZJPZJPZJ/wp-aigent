@@ -5,7 +5,11 @@
 
     var BrowserState = window.WPAIGentBrowserState;
     var config = window.wpAIgentAttributionConfig || {};
-    if (!BrowserState) return;
+    var trackingEnabled = config.trackingEnabled === true;
+    var dataLayerEventName = typeof config.dataLayerEventName === 'string'
+        && /^[A-Za-z0-9_.-]{1,80}$/.test(config.dataLayerEventName)
+        ? config.dataLayerEventName
+        : 'elementor_form';
 
     var MAX_BYTES = 12288;
     var MAX_JOURNEY_BYTES = MAX_BYTES - 64;
@@ -113,6 +117,7 @@
     }
 
     function loadState() {
+        if (!BrowserState) return null;
         if (!BrowserState.hasPersistentState()) return null;
         var state = BrowserState.getPreferenceScope('attribution');
         if (!validState(state)) {
@@ -214,25 +219,27 @@
         return byteLength(json) <= MAX_BYTES ? json : '';
     }
 
-    try {
-        updateState();
-    } catch (error) {
-        console.warn('WP AIgent attribution state was not updated.', error);
-    }
-
-    document.addEventListener('submit', function(event) {
-        var field = null;
+    if (trackingEnabled && BrowserState) {
         try {
-            var form = event.target;
-            if (!form || String(form.tagName).toLowerCase() !== 'form') return;
-            field = form.querySelector('input[type="hidden"][name="form_fields[wp_aigent_attribution]"]');
-            if (!field) return;
-            field.value = formJson();
+            updateState();
         } catch (error) {
-            if (field) field.value = '';
-            console.warn('WP AIgent attribution was omitted from this form.', error);
+            console.warn('WP AIgent attribution state was not updated.', error);
         }
-    }, true);
+
+        document.addEventListener('submit', function(event) {
+            var field = null;
+            try {
+                var form = event.target;
+                if (!form || String(form.tagName).toLowerCase() !== 'form') return;
+                field = form.querySelector('input[type="hidden"][name="form_fields[wp_aigent_attribution]"]');
+                if (!field) return;
+                field.value = formJson();
+            } catch (error) {
+                if (field) field.value = '';
+                console.warn('WP AIgent attribution was omitted from this form.', error);
+            }
+        }, true);
+    }
 
     if (config.dataLayerEnabled === true && window.jQuery) {
         window.jQuery(document).on('submit_success.wpAIgentAttribution', function(event) {
@@ -240,25 +247,30 @@
                 var form = window.jQuery(event.target).closest('form')[0] || null;
                 if (!form) return;
                 var field = form.querySelector('input[type="hidden"][name="form_fields[wp_aigent_attribution]"]');
-                if (!field || !field.value) return;
-                var snapshot = JSON.parse(field.value);
-                var journey = snapshot && Array.isArray(snapshot.journey) ? snapshot.journey : [];
-                var submitted = null;
-                for (var index = journey.length - 1; index >= 0; index--) {
-                    if (journey[index] && journey[index].event === 'form_submit' && journey[index].event_id) {
-                        submitted = journey[index];
-                        break;
+                var leadEventId = '';
+                if (field && field.value) {
+                    try {
+                        var snapshot = JSON.parse(field.value);
+                        var journey = snapshot && Array.isArray(snapshot.journey) ? snapshot.journey : [];
+                        for (var index = journey.length - 1; index >= 0; index--) {
+                            if (journey[index] && journey[index].event === 'form_submit' && /^[a-f0-9-]{36}$/i.test(journey[index].event_id || '')) {
+                                leadEventId = journey[index].event_id.toLowerCase();
+                                break;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('WP AIgent attribution JSON was unavailable for this successful form.', error);
                     }
                 }
-                if (!submitted || !/^[a-f0-9-]{36}$/i.test(submitted.event_id)) return;
                 window.dataLayer = window.dataLayer || [];
-                window.dataLayer.push({
-                    event: 'elementor_generate_lead',
+                var payload = {
+                    event: dataLayerEventName,
                     form_id: readable(form.id || form.getAttribute('name') || '', 120),
-                    lead_event_id: submitted.event_id.toLowerCase(),
                     page_path: currentPath(),
-                });
-                field.value = '';
+                };
+                if (leadEventId) payload.lead_event_id = leadEventId;
+                window.dataLayer.push(payload);
+                if (field) field.value = '';
             } catch (error) {
                 console.warn('WP AIgent dataLayer event was omitted.', error);
             }
@@ -266,7 +278,7 @@
     }
 
     window.WPAIGentAttribution = Object.freeze({
-        getSnapshot: getSnapshot,
-        reset: function() { BrowserState.removePreferenceScope('attribution'); },
+        getSnapshot: function() { return trackingEnabled ? getSnapshot() : null; },
+        reset: function() { if (BrowserState) BrowserState.removePreferenceScope('attribution'); },
     });
 })(window, document);
