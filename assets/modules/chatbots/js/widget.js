@@ -27,12 +27,10 @@
 
         async prepareSession(forceRefresh) {
             if (this.isEditor) {
-                this.visitorId = 'editor-preview';
                 return;
             }
 
             BrowserState.clearLegacyStorage();
-            BrowserState.setVisitorId(BrowserState.getVisitorId());
             if (forceRefresh) window.wpAIgentVisitorCredentialPromise = null;
 
             if (!window.wpAIgentVisitorCredentialPromise) {
@@ -41,9 +39,7 @@
                     throw error;
                 });
             }
-            var credential = await window.wpAIgentVisitorCredentialPromise;
-            this.visitorId = credential.visitor_id;
-            BrowserState.setVisitorIdentity(this.visitorId, credential.credential_expires_at_gmt || '');
+            await window.wpAIgentVisitorCredentialPromise;
         }
 
         async requestVisitorCredential() {

@@ -77,10 +77,10 @@ CHANGELOG.md                         # 变更日志、重大决定、兼容与�
 | Chatbots | 部分实现 | Chatbot 配置、Prompt、同步聊天 API、Lead JSON | 应只拥有聊天体验与 Prompt 策略，并发布标准 Chat Interaction |
 | Knowledge | 已实现 | Markdown 文档、Card、Chunk 索引、候选路由与检索 | 后续补齐引用、索引 Job、失败恢复与版本化 |
 | Conversations | 部分实现 | Conversation CPT、Visitor关联、消息、摘要、Token Usage、当前归因投影 | 高频消息应迁往独立表，并向Interactions发布标准互动 |
-| Forms | 部分实现 | 国家区号字段、可选Hidden归因JSON | 应产生标准Form Interaction，不建立独立客户画像 |
+| Forms | 部分实现 | 国家区号字段、可选Hidden Journey文本 | 应产生标准Form Interaction，不建立独立客户画像 |
 | Intelligence | 部分实现 | 解析 Chat 模型的结构化 JSON | 应拥有 Schema、Fact、Evidence、置信度、提取版本和 Profile 投影 |
 | Notifications | 部分实现 | 分组规则、Email、WeCom、闲置 Cron | 应消费领域事件；渠道协议迁至 `integrations/channels`，投递记录可重试 |
-| Attribution（Core） | 部分实现 | Browser State、First/Last Touch、Journey、Chat投影 | 后续作为标准Interaction attribution值对象，不直接拥有Customer Profile |
+| Attribution（Core） | 部分实现 | Browser State、Journey、Chat投影 | 后续作为标准Interaction attribution值对象，不直接拥有Customer Profile |
 | Interactions | 未实现 | 无 | 拥有所有渠道标准互动、原始快照、来源映射和幂等 Intake |
 | Customers | 未实现 | 无 | 拥有 Customer Profile、Identity Link、合并、拆分和人工确认值 |
 | Lifecycle | 未实现 | 无 | 拥有 Lead 阶段、有效性、负责人、标签、跟进和业务状态 |
@@ -114,11 +114,11 @@ assets/modules/chatbots/js/widget.js
 
 ```text
 页面加载
-  → 读取UTM、click ID、外部Referrer和pathname白名单
+  → 读取首个source、外部Referrer和完整pathname + query
   → 写入wp_aigent_browser_state.preferences.attribution
 Elementor Form submit
   → 唯一捕获阶段submit监听器查找wp_aigent_attribution Hidden字段
-  → 字段存在时同步填入可选归因JSON；不存在或异常时立即退出
+  → 字段存在时同步填入每行一条的可读Journey文本；不存在或异常时立即退出
 AI Chat submit
   → 在现有metadata.attribution中附加快照
   → 服务端白名单校验后保存Conversation当前归因投影
@@ -126,8 +126,8 @@ AI Chat submit
 
 - 归因默认关闭，只使用统一localStorage键，不在浏览期间上传归因。
 - 表单必须由管理员添加非必填`wp_aigent_attribution` Hidden字段；插件不自动创建字段、不读取其他输入、不阻止或延迟提交。
-- Form侧不请求Visitor ID，只在Browser State已有已确认且未过期公开UUID时携带；该值不得用于授权或身份认定。
-- 页面归因只记录白名单参数和path，不保存完整query、hash、表单内容或PII。
+- Form侧不请求、读取或提交Visitor ID；Chat仍由HttpOnly Cookie关联可信Visitor。
+- 页面归因保存完整pathname + query并排除hash，不读取表单内容；query可能包含PII或Token，启用方必须排除敏感路径并确保URL不承载秘密。
 - 原Form AI分析代码和菜单已移除；旧三张分析表及option保留为不可写的回滚数据，不再安装或升级。
 - 当前Form和Chat归因尚未写入标准Interaction、Customer Fact或Customer Profile。
 
@@ -149,7 +149,7 @@ Lifecycle / Analytics / Notifications
 
 Visitor ID 是匿名浏览器关联键，不是客户主键、登录凭证或访问控制依据。未来身份模型必须区分：
 
-- `visitor_id`：浏览器状态中的全局 UUID，用于匿名互动关联和归因。
+- `visitor_id`：后台签发并由HttpOnly Cookie持有证明的全局UUID，用于匿名互动关联；不存入localStorage或Form归因。
 - `customer_id`：WP AIgent 生成的永久 Customer 主键。
 - `identity_link`：Visitor、标准化邮箱、电话、WhatsApp 等与 Customer 的关联。
 - `interaction_id`：聊天、表单或其他客户触点的统一记录 ID。
@@ -364,13 +364,13 @@ Analytics 必须围绕 Visitor、Customer、Interaction 和 Lifecycle 的公开 
 - Provider API Key 使用 WordPress salts 派生密钥进行 AES-256-CBC 加密存储。
 - Visitor ID 必须由后台使用密码学安全随机源签发，不得用于登录认证、后台授权或直接认定真实用户；Chat 与 History 只能信任由服务端验证的 Visitor Cookie。
 - Visitor 凭证使用 Host-only、HttpOnly、SameSite=Lax Cookie；HTTPS 下必须同时使用 Secure 与 `__Host-` 前缀。凭证不得进入 URL、JSON、localStorage、日志或 Prompt。
-- 浏览器持久化统一使用 version 2 的 `wp_aigent_browser_state`：`{ version, visitor_id, preferences }`。这里只保存公开Visitor ID、UI偏好和获准的归因白名单；新功能只能在`preferences`下增加作用域，禁止新建独立localStorage key。
+- 浏览器持久化统一使用version 3的`wp_aigent_browser_state`：`{ version, preferences }`。这里只保存UI偏好和Journey；不得保存Visitor ID、identity作用域、Cookie签名或Token，新功能只能在`preferences`下增加作用域，禁止新建独立localStorage key。
 - Visitor Cookie 采用 90 天滚动有效期，剩余 15 天内访问时续签同一 Visitor ID；缺失、过期、签名错误或被篡改的旧身份必须重新签发，不能访问原身份的历史对话。
 - 插件不实施严格同源 Origin 校验，也不输出通配凭据 CORS；可信子域名访问必须由部署方在 WordPress、Web Server 或反向代理中配置明确 CORS，并使用带凭据请求。
 - REST/AJAX 必须执行 Capability、nonce、输入校验和限流。
 - 客户端 IP 读取使用 Security 设置中的部署模式：源服务器读取 `REMOTE_ADDR`；服务器反代只在可信代理 CIDR 后解析 `X-Forwarded-For`/`X-Real-IP`；Cloudflare 只在官方网络或额外可信 CIDR 后读取 `CF-Connecting-IP`。不得无条件信任客户端 Header。
 - Prompt 与日志不得包含 API Key、密码、IP、User Agent 等无业务必要的敏感数据。
-- 浏览器归因只允许UTM、click ID、外部Referrer origin/path和站内pathname白名单；不得读取或发送表单输入、页面正文或PII。
+- 浏览器归因记录首个source、外部Referrer和完整pathname + query；不得读取表单输入或页面正文。完整query可能包含PII或Token，必须通过排除路径和站点URL规范控制风险。
 - 后台显示个人信息必须受 Capability 和隐私策略控制。
 - 重要任务必须有状态、错误摘要和人工重试入口，不能只依赖 PHP error log。
 

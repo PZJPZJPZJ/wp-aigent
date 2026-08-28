@@ -11,6 +11,7 @@ defined('ABSPATH') || exit;
  * @var int     $msg_count
  * @var string  $started_at
  * @var mixed   $lead_data
+ * @var array   $attribution_lines
  * @var string  $ip
  * @var string  $ua
  * @var string  $page_url
@@ -190,6 +191,18 @@ defined('ABSPATH') || exit;
             </tr>
             <?php endforeach; ?>
         </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- Attribution -->
+    <?php if (!empty($attribution_lines)): ?>
+    <div class="ai-conv-section">
+        <h3><?php esc_html_e('Attribution', 'wp-aigent'); ?></h3>
+        <div style="padding:10px 12px;background:#f6f7f7;border:1px solid #dcdcde;">
+            <?php foreach ($attribution_lines as $attribution_line): ?>
+                <div style="margin-bottom:6px;word-break:break-word;"><code><?php echo esc_html($attribution_line); ?></code></div>
+            <?php endforeach; ?>
+        </div>
     </div>
     <?php endif; ?>
 

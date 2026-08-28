@@ -80,14 +80,6 @@ class AI_Chatbot_CPT_Conversation {
             'normal',
             'high'
         );
-        add_meta_box(
-            'ai_conversation_attribution',
-            __('Attribution', 'wp-aigent'),
-            [self::class, 'render_attribution_meta_box'],
-            'ai_conversation',
-            'normal',
-            'default'
-        );
     }
 
     public static function render_meta_box($post): void {
@@ -96,6 +88,9 @@ class AI_Chatbot_CPT_Conversation {
         $msg_count    = (int) get_post_meta($post->ID, 'conversation_message_count', true);
         $started_at   = get_post_meta($post->ID, 'conversation_started_at', true);
         $lead_data    = get_post_meta($post->ID, 'conversation_lead_data', true);
+        $attribution  = get_post_meta($post->ID, 'conversation_attribution', true);
+        if (!is_array($attribution)) $attribution = [];
+        $attribution_lines = self::attribution_display_lines($attribution);
         $ip       = get_post_meta($post->ID, 'conversation_visitor_ip', true);
         $ua       = get_post_meta($post->ID, 'conversation_visitor_ua', true);
         $page_url = get_post_meta($post->ID, 'conversation_visitor_page_url', true);
@@ -137,46 +132,42 @@ class AI_Chatbot_CPT_Conversation {
         include WP_AIGENT_PATH . 'templates/modules/conversations/admin-meta-box.php';
     }
 
-    public static function render_attribution_meta_box($post): void {
-        $attribution = get_post_meta($post->ID, 'conversation_attribution', true);
-        if (!is_array($attribution) || !$attribution) {
-            echo '<p class="description">' . esc_html__('No attribution has been recorded for this conversation.', 'wp-aigent') . '</p>';
-            return;
-        }
-
-        echo '<table class="widefat striped"><tbody>';
-        self::attribution_row(__('Visitor ID', 'wp-aigent'), (string) ($attribution['visitor_id'] ?? ''), true);
-        self::attribution_row(__('First Visit', 'wp-aigent'), (string) ($attribution['first_visit_at_gmt'] ?? ''));
-        foreach (['first_touch' => __('First Touch', 'wp-aigent'), 'last_touch' => __('Last Touch', 'wp-aigent')] as $key => $label) {
-            $touch = is_array($attribution[$key] ?? null) ? $attribution[$key] : [];
-            $parts = [];
-            foreach (['source', 'medium', 'campaign', 'term', 'content', 'gclid', 'wbraid', 'gbraid'] as $field) {
-                if ((string) ($touch[$field] ?? '') !== '') $parts[] = $field . ': ' . $touch[$field];
-            }
-            self::attribution_row($label, implode(' · ', $parts));
-            self::attribution_row($label . ' ' . __('Landing', 'wp-aigent'), (string) ($touch['landing_path'] ?? ''), true);
-            self::attribution_row($label . ' ' . __('Referrer', 'wp-aigent'), (string) ($touch['referrer_url'] ?? ''));
-        }
-
-        echo '<tr><th style="width:180px;">' . esc_html__('Journey', 'wp-aigent') . '</th><td>';
-        if (!empty($attribution['journey']) && is_array($attribution['journey'])) {
-            echo '<ol style="margin:0 0 0 18px;">';
-            foreach ($attribution['journey'] as $item) {
+    private static function attribution_display_lines(array $attribution): array {
+        $lines = [];
+        $journey = is_array($attribution['journey'] ?? null) ? $attribution['journey'] : [];
+        $is_journey_only = !empty($journey[0]) && is_array($journey[0]) && array_key_exists('time', $journey[0]);
+        if ($is_journey_only) {
+            foreach ($journey as $index => $item) {
                 if (!is_array($item)) continue;
-                echo '<li><code>' . esc_html((string) ($item['path'] ?? '')) . '</code> <span class="description">' . esc_html((string) ($item['observed_at_gmt'] ?? '')) . '</span></li>';
+                $time = (string) ($item['time'] ?? '');
+                $path = (string) ($item['path'] ?? '');
+                if ($time === '' || $path === '') continue;
+                $parts = [$time, $path];
+                if ($index === 0 && !empty($item['source'])) $parts[] = 'source=' . $item['source'];
+                if ($index === 0 && !empty($item['referrer_url'])) $parts[] = 'referrer=' . $item['referrer_url'];
+                $lines[] = implode(' | ', $parts);
             }
-            echo '</ol>';
-        } else {
-            echo '—';
         }
-        echo '</td></tr></tbody></table>';
-    }
 
-    private static function attribution_row(string $label, string $value, bool $code = false): void {
-        if ($value === '') return;
-        echo '<tr><th style="width:180px;">' . esc_html($label) . '</th><td>';
-        echo $code ? '<code>' . esc_html($value) . '</code>' : esc_html($value);
-        echo '</td></tr>';
+        // Read-only compatibility for 2.0.9 First/Last Touch records.
+        if (!$is_journey_only && !empty($attribution['first_touch']) && is_array($attribution['first_touch'])) {
+            $first = $attribution['first_touch'];
+            $parts = [
+                (string) ($first['observed_at_gmt'] ?? $attribution['first_visit_at_gmt'] ?? ''),
+                (string) ($first['landing_path'] ?? '/'),
+                'source=' . (string) ($first['source'] ?? 'unknown'),
+            ];
+            if (!empty($first['referrer_url'])) $parts[] = 'referrer=' . $first['referrer_url'];
+            $lines[] = implode(' | ', $parts);
+            foreach ($journey as $item) {
+                if (!is_array($item)) continue;
+                $time = (string) ($item['observed_at_gmt'] ?? '');
+                $path = (string) ($item['path'] ?? '');
+                if ($time !== '' && $path !== '') $lines[] = $time . ' | ' . $path;
+            }
+        }
+
+        return $lines;
     }
 
     public static function prevent_manual_edit(int $post_id, $post, bool $update): void {
@@ -253,18 +244,11 @@ class AI_Chatbot_CPT_Conversation {
         return $conversation_id ?? self::create($visitor_id, $chatbot_id, $visitor_data);
     }
 
-    /** Save the current attribution projection while preserving the first touch. */
+    /** Save the current validated Journey projection. */
     public static function save_attribution(int $conversation_id, array $attribution): void {
         if ($conversation_id <= 0 || get_post_type($conversation_id) !== 'ai_conversation') {
             return;
         }
-
-        $existing = get_post_meta($conversation_id, 'conversation_attribution', true);
-        if (is_array($existing) && !empty($existing['first_touch'])) {
-            $attribution['first_touch'] = $existing['first_touch'];
-            $attribution['first_visit_at_gmt'] = $existing['first_visit_at_gmt'] ?? $attribution['first_visit_at_gmt'];
-        }
-        $attribution['visitor_id'] = (string) get_post_meta($conversation_id, WP_AIGent_Visitor_Identity::CONVERSATION_META_KEY, true);
 
         update_post_meta($conversation_id, 'conversation_attribution', $attribution);
         update_post_meta($conversation_id, 'conversation_attribution_updated_at_gmt', current_time('mysql', true));

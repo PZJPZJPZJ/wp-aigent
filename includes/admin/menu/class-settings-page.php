@@ -109,11 +109,12 @@ class WP_AIGent_Settings_Page {
         <form method="post" action="options.php">
             <?php settings_fields('wp_aigent_attribution'); ?>
             <h2><?php esc_html_e('Browser attribution', 'wp-aigent'); ?></h2>
-            <p class="description"><?php esc_html_e('Tracks approved campaign parameters and page paths in the existing browser state. It sends no attribution during browsing and never blocks a form or Chat request when unavailable.', 'wp-aigent'); ?></p>
+            <p class="description"><?php esc_html_e('Stores a Journey list in the existing browser state. It sends no attribution during browsing and never blocks a form or Chat request when unavailable.', 'wp-aigent'); ?></p>
+            <div class="notice notice-warning inline"><p><?php esc_html_e('Journey paths retain the complete URL query string. Query parameters may contain personal data, access tokens, order references, or search text. Exclude sensitive paths and ensure your site never places secrets in URLs before enabling this feature.', 'wp-aigent'); ?></p></div>
             <table class="form-table" role="presentation">
                 <?php $this->checkbox_row('tracking_enabled', __('Enable attribution tracking', 'wp-aigent'), $settings, __('Disabled by default. When enabled, one page-load update and one capture-phase submit listener maintain optional attribution. JavaScript or storage failure leaves the original form unchanged.', 'wp-aigent')); ?>
-                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'retention_days', __('Retention days', 'wp-aigent'), $settings, 1, 365, __('Rolling browser retention for First/Last Touch and Journey. Choose a period allowed by your privacy policy.', 'wp-aigent')); ?>
-                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'journey_limit', __('Journey page limit', 'wp-aigent'), $settings, 0, 50, __('Maximum deduplicated page paths retained. Use 0 to disable Journey while keeping First/Last Touch.', 'wp-aigent')); ?>
+                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'retention_days', __('Retention days', 'wp-aigent'), $settings, 1, 365, __('Rolling browser retention for the Journey list. Choose a period allowed by your privacy policy.', 'wp-aigent')); ?>
+                <?php $this->number_row(WP_AIGent_Attribution_Settings::OPTION_NAME, 'journey_limit', __('Journey page limit', 'wp-aigent'), $settings, 1, 50, __('Maximum deduplicated paths retained. The first source/referrer entry is always preserved while older middle entries are trimmed.', 'wp-aigent')); ?>
                 <tr>
                     <th scope="row"><label for="wp-aigent-excluded-path-prefixes"><?php esc_html_e('Excluded path prefixes', 'wp-aigent'); ?></label></th>
                     <td>
@@ -132,7 +133,7 @@ class WP_AIGent_Settings_Page {
                 <tr><th><?php esc_html_e('Required', 'wp-aigent'); ?></th><td><?php esc_html_e('No', 'wp-aigent'); ?></td></tr>
                 <tr><th><?php esc_html_e('Default value', 'wp-aigent'); ?></th><td><?php esc_html_e('Empty', 'wp-aigent'); ?></td></tr>
             </tbody></table>
-            <p class="description"><?php esc_html_e('Forms without this field are not scanned or modified. Visitor ID is included only when Chat has already confirmed a server-issued identity; forms never request it.', 'wp-aigent'); ?></p>
+            <p class="description"><?php esc_html_e('Forms without this field are not scanned or modified. The value is readable Journey text, not JSON. Forms never request, read, or submit WP AIgent Visitor ID; Chat identity remains protected by its HttpOnly cookie.', 'wp-aigent'); ?></p>
 
             <h2><?php esc_html_e('Country code field', 'wp-aigent'); ?></h2>
             <table class="form-table" role="presentation">

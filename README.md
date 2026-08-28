@@ -76,7 +76,7 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 
 ### 🔌 Integration
 - **Elementor widget** — drag-and-drop integration with any Elementor page
-- **Lead attribution** — optional First/Last Touch and Journey JSON for explicitly configured Elementor Hidden fields
+- **Lead attribution** — optional readable Journey text for explicitly configured Elementor Hidden fields
 - **Country Code field** — retained Elementor field type with CF-IPCountry detection and safe default fallback
 - **REST API** — versionless `/ai-chat/visitor`, `/ai-chat/chat`, and `/ai-chat/history` endpoints
 - **Auto-update** — GitHub Release updater built-in (Update URI support)
@@ -84,7 +84,7 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 
 ### Elementor表单归因配置
 
-归因默认关闭。启用后，插件只在统一的`wp_aigent_browser_state`中记录UTM、Google click ID、外部Referrer和pathname，不在浏览期间上传数据。
+归因默认关闭。启用后，插件只在统一的`wp_aigent_browser_state`中记录Journey，不在浏览期间上传数据。第一条记录source和外部Referrer，后续记录完整`pathname + query`及时间。
 
 每个需要归因的Elementor Form必须手动添加：
 
@@ -95,7 +95,9 @@ WP AIgent is an AI customer-interaction plugin for WordPress. It provides AI cha
 | Required | No |
 | Default Value | 空 |
 
-表单提交时，唯一的捕获阶段submit监听器只填写这个已存在的字段。不配置字段、localStorage不可用或归因损坏时，插件立即退出，不阻止或延迟Elementor原始提交。表单不会为Visitor ID发起网络请求；只有Chat已经确认过服务端Visitor身份时才可能携带公开UUID。
+表单提交时，唯一的捕获阶段submit监听器只填写这个已存在的字段，值为每行一条的可读Journey文本。不配置字段、localStorage不可用或归因损坏时，插件立即退出，不阻止或延迟Elementor原始提交。localStorage和Form均不保存Visitor ID；Chat身份由HttpOnly Cookie独立管理。
+
+Journey会保留完整query参数。URL中如包含邮箱、Token、订单号、搜索内容或其他敏感数据，这些值也会进入localStorage及成功提交的Form、Email或CRM。启用前必须通过Excluded Path Prefixes排除敏感页面，并确保站点不把秘密放入URL。
 
 ---
 

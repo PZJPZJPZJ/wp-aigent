@@ -25,6 +25,7 @@ class WP_AIGent_Attribution_Settings {
                 $settings['country_code_enabled'] = '1';
             }
         }
+        $settings['journey_limit'] = max(1, min(50, (int) $settings['journey_limit']));
 
         return $settings;
     }
@@ -47,7 +48,7 @@ class WP_AIGent_Attribution_Settings {
         return [
             'tracking_enabled'       => !empty($input['tracking_enabled']) ? '1' : '0',
             'retention_days'         => self::bounded_int($input, 'retention_days', 1, 365),
-            'journey_limit'          => self::bounded_int($input, 'journey_limit', 0, 50),
+            'journey_limit'          => self::bounded_int($input, 'journey_limit', 1, 50),
             'excluded_path_prefixes' => self::sanitize_path_prefixes($input['excluded_path_prefixes'] ?? ''),
             'data_layer_enabled'     => !empty($input['data_layer_enabled']) ? '1' : '0',
             'country_code_enabled'   => !empty($input['country_code_enabled']) ? '1' : '0',

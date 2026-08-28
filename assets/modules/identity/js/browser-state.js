@@ -4,7 +4,7 @@
     if (window.WPAIGentBrowserState) return;
 
     var STORAGE_KEY = 'wp_aigent_browser_state';
-    var memoryState = { version: 2, visitor_id: '', preferences: {} };
+    var memoryState = { version: 3, preferences: {} };
 
     function isObject(value) {
         return value && typeof value === 'object' && !Array.isArray(value);
@@ -21,15 +21,10 @@
     function normalize(value) {
         value = isObject(value) ? value : {};
         var preferences = isObject(value.preferences) ? Object.assign({}, value.preferences) : {};
-        if (isObject(preferences.identity)) {
-            preferences.identity = Object.assign({}, preferences.identity);
-            delete preferences.identity.visitor_token;
-            if (!Object.keys(preferences.identity).length) delete preferences.identity;
-        }
+        delete preferences.identity;
 
         return {
-            version: 2,
-            visitor_id: typeof value.visitor_id === 'string' ? value.visitor_id : '',
+            version: 3,
             preferences: preferences,
         };
     }
@@ -104,30 +99,6 @@
         });
     }
 
-    function setVisitorIdentity(visitorId, expiresAt) {
-        update(function(state) {
-            state.visitor_id = typeof visitorId === 'string' ? visitorId : '';
-            if (!isObject(state.preferences.identity)) state.preferences.identity = {};
-            state.preferences.identity.visitor_confirmed_at_gmt = new Date().toISOString();
-            state.preferences.identity.visitor_expires_at_gmt = typeof expiresAt === 'string' ? expiresAt : '';
-        });
-    }
-
-    function getConfirmedVisitorId() {
-        var state = read();
-        var visitorId = state.visitor_id;
-        var expiresAt = getPreference('identity', 'visitor_expires_at_gmt', '');
-        if (typeof visitorId !== 'string'
-            || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(visitorId)
-            || typeof expiresAt !== 'string'
-            || !Number.isFinite(Date.parse(expiresAt))
-            || Date.parse(expiresAt) <= Date.now()
-        ) {
-            return '';
-        }
-        return visitorId.toLowerCase();
-    }
-
     function clearLegacyStorage() {
         try {
             if (!window.localStorage) return;
@@ -143,15 +114,25 @@
         } catch (error) {}
     }
 
+    function migrateStoredState() {
+        try {
+            var raw = window.localStorage ? window.localStorage.getItem(STORAGE_KEY) : null;
+            if (!raw) return;
+            var stored = JSON.parse(raw);
+            if (stored.version !== 3
+                || Object.prototype.hasOwnProperty.call(stored, 'visitor_id')
+                || (isObject(stored.preferences) && Object.prototype.hasOwnProperty.call(stored.preferences, 'identity'))
+            ) {
+                write(stored);
+            }
+        } catch (error) {}
+    }
+
+    migrateStoredState();
+
     window.WPAIGentBrowserState = Object.freeze({
         storageKey: STORAGE_KEY,
         hasPersistentState: hasPersistentState,
-        getVisitorId: function() { return read().visitor_id; },
-        setVisitorId: function(visitorId) {
-            update(function(state) { state.visitor_id = visitorId; });
-        },
-        setVisitorIdentity: setVisitorIdentity,
-        getConfirmedVisitorId: getConfirmedVisitorId,
         getPreference: getPreference,
         setPreference: setPreference,
         removePreference: removePreference,

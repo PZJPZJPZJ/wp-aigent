@@ -4,6 +4,28 @@
 
 ## [Unreleased]
 
+## [2.0.11] - 2026-08-28
+
+### Added
+
+- Elementor AI Chatbot组件新增响应式聊天宽度和高度设置，可分别为桌面、平板和手机选择尺寸与单位；留空时保持现有Button弹窗和内嵌Box默认尺寸。
+
+## [2.0.10] - 2026-08-27
+
+### Changed
+
+- Attribution改为无`schema_version`的Journey-only结构；localStorage只保存`{version:3,preferences}`，移除根Visitor ID和identity作用域，同时保留Chatbot UI偏好。
+- 第一条Journey记录`path`、`time`、`source`和`referrer_url`，后续页面只记录`path`和`time`；path与Referrer保留完整query并排除hash。
+- Elementor Hidden值从JSON改为每行一条的可读文本；Form提交副本末尾增加`event=form_submit`和`event_id`，事件不写回长期localStorage。
+- Form不再关联WP AIgent Visitor。Chat继续通过HttpOnly签名Cookie取得可信Visitor ID，并由Conversation自身字段保存，不依赖localStorage。
+- Conversation Attribution从独立Meta Box移动到主详情的Lead Data之后，不重复显示Visitor ID；2.0.9 First/Last Touch数据保持只读兼容展示，新Journey到达后覆盖旧投影。
+- Journey limit最小值调整为1，第一条来源记录始终保留；数量或12KiB超限时从第二条开始裁剪最旧记录。
+
+### Security
+
+- **重大决定：按业务要求保留完整query。** 该选择能够保留所有URL参数，但可能把邮箱、Token、订单号、搜索文本或其他敏感数据写入localStorage、Form、Email或CRM。插件不自动脱敏参数；管理员必须通过Excluded Path Prefixes排除敏感页面，并确保站点不在URL中放置秘密。回滚到`2.0.9`会恢复白名单参数和本地公开Visitor ID结构，回滚前后均需清理页面与CDN缓存。
+- Chat Journey仍经过服务端形状、字段、日期、URL、数量和12KiB校验；无效归因只被丢弃，不影响AI请求，也不进入Prompt、通知、错误日志或公共REST响应。
+
 ## [2.0.9] - 2026-08-27
 
 ### Added

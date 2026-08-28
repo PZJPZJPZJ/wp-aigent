@@ -143,6 +143,50 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
         ]);
 
+        $this->add_live_responsive_control('chat_width', [
+            'label'       => __('Chat Width', 'wp-aigent'),
+            'description' => __('Sets the popup or inline chat width. Leave empty to use the default size, and set device-specific values when needed.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::SLIDER,
+            'size_units'  => ['px', '%', 'vw'],
+            'range'       => [
+                'px' => [
+                    'min' => 240,
+                    'max' => 1600,
+                ],
+                '%' => [
+                    'min' => 10,
+                    'max' => 100,
+                ],
+                'vw' => [
+                    'min' => 10,
+                    'max' => 100,
+                ],
+            ],
+            'selectors'   => [
+                '{{WRAPPER}} .ai-chatbot-popup, {{WRAPPER}} .ai-chatbot-box' => 'width: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_live_responsive_control('chat_height', [
+            'label'       => __('Chat Height', 'wp-aigent'),
+            'description' => __('Sets the popup or inline chat height. Leave empty to use the default size, and set device-specific values when needed.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::SLIDER,
+            'size_units'  => ['px', 'vh'],
+            'range'       => [
+                'px' => [
+                    'min' => 240,
+                    'max' => 1200,
+                ],
+                'vh' => [
+                    'min' => 20,
+                    'max' => 100,
+                ],
+            ],
+            'selectors'   => [
+                '{{WRAPPER}} .ai-chatbot-popup, {{WRAPPER}} .ai-chatbot-box' => 'height: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
         $this->add_live_control('popup_color', [
             'label'   => __('Popup/Header Color', 'wp-aigent'),
             'type'    => \Elementor\Controls_Manager::COLOR,
@@ -344,6 +388,11 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
     private function add_live_control(string $id, array $args): void {
         $args['render_type'] = 'template';
         $this->add_control($id, $args);
+    }
+
+    private function add_live_responsive_control(string $id, array $args): void {
+        $args['render_type'] = 'template';
+        $this->add_responsive_control($id, $args);
     }
 
     protected function render(): void {
