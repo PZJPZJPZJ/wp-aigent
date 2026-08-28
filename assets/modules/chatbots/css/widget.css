@@ -241,8 +241,8 @@ div.ai-chatbot-container .ai-chatbot-contact-form p {
     position: absolute;
     bottom: calc(100% + 10px);
     right: 0;
-    width: 380px;
-    height: 560px;
+    width: min(380px, calc(100vw - 32px));
+    height: min(560px, calc(100dvh - 160px));
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -514,18 +514,6 @@ div.ai-chatbot-container .ai-chat-contact-submit {
     border-radius: 8px !important;
     cursor: pointer;
     font-size: 14px;
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-    .ai-chatbot-popup {
-        width: calc(100vw - 32px);
-        height: calc(100dvh - 120px);
-        bottom: calc(100% + 10px);
-        right: 0;
-        left: auto;
-        top: auto;
-    }
 }
 
 /* Scrollbar */
