@@ -230,6 +230,45 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
 
         $this->end_controls_section();
 
+        $this->start_controls_section('section_input_bar_style', [
+            'label' => __('Input Bar', 'wp-aigent'),
+            'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_live_control('input_bar_color', [
+            'label'       => __('Background Color', 'wp-aigent'),
+            'description' => __('Choose a color with transparency to keep messages visible behind the input bar. Recommended opacity: 75–90%. A fully opaque color disables the see-through effect.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::COLOR,
+            'alpha'       => true,
+            'default'     => 'rgba(255, 255, 255, 0.82)',
+            'selectors'   => [
+                '{{WRAPPER}} .ai-chatbot-input-area' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_live_control('input_bar_blur', [
+            'label'       => __('Background Blur', 'wp-aigent'),
+            'description' => __('Applies Gaussian blur to chat content behind the translucent input bar. Recommended: 12px. Set to 0 to disable blur; unsupported browsers keep the selected background color.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::SLIDER,
+            'size_units'  => ['px'],
+            'range'       => [
+                'px' => [
+                    'min'  => 0,
+                    'max'  => 40,
+                    'step' => 1,
+                ],
+            ],
+            'default'     => [
+                'unit' => 'px',
+                'size' => 12,
+            ],
+            'selectors'   => [
+                '{{WRAPPER}} .ai-chatbot-input-area' => '-webkit-backdrop-filter: blur({{SIZE}}{{UNIT}}); backdrop-filter: blur({{SIZE}}{{UNIT}});',
+            ],
+        ]);
+
+        $this->end_controls_section();
+
         $this->start_controls_section('section_button_animation', [
             'label'     => __('Button Animation', 'wp-aigent'),
             'tab'       => \Elementor\Controls_Manager::TAB_STYLE,

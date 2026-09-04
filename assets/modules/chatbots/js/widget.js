@@ -19,6 +19,7 @@
             this.isOpen = config.layout_mode === 'box';
             this.hasHistory = false;
             this.timers = [];
+            this.inputSafeAreaObserver = null;
             this.destroyed = false;
             this.offlineMessageShown = false;
 
@@ -219,11 +220,13 @@
 
             this.messagesEl = this.container.querySelector('.ai-chatbot-messages');
             this.inputEl = this.container.querySelector('.ai-chatbot-input');
+            this.inputAreaEl = this.container.querySelector('.ai-chatbot-input-area');
             this.sendBtn = this.container.querySelector('.ai-chatbot-send');
             this.fabEl = this.container.querySelector('.ai-chatbot-fab');
             this.fabButtonEl = this.container.querySelector('.ai-chatbot-fab-button');
             this.popupEl = this.container.querySelector('.ai-chatbot-popup');
             this.closeBtn = this.container.querySelector('.ai-chatbot-close');
+            this.observeInputSafeArea();
         }
 
         bindEvents() {
@@ -665,6 +668,24 @@
             if (this.inputEl) {
                 this.inputEl.style.height = 'auto';
                 this.inputEl.style.height = this.inputEl.scrollHeight + 'px';
+                this.updateInputSafeArea();
+            }
+        }
+
+        observeInputSafeArea() {
+            this.updateInputSafeArea();
+            if (!this.inputAreaEl || typeof window.ResizeObserver !== 'function') return;
+
+            this.inputSafeAreaObserver = new window.ResizeObserver(this.updateInputSafeArea.bind(this));
+            this.inputSafeAreaObserver.observe(this.inputAreaEl);
+        }
+
+        updateInputSafeArea() {
+            if (!this.messagesEl || !this.inputAreaEl || this.destroyed) return;
+
+            var input_area_height = Math.ceil(this.inputAreaEl.getBoundingClientRect().height);
+            if (input_area_height > 0) {
+                this.messagesEl.style.setProperty('--ai-chatbot-input-safe-area', input_area_height + 'px');
             }
         }
 
@@ -676,6 +697,10 @@
 
         destroy() {
             this.destroyed = true;
+            if (this.inputSafeAreaObserver) {
+                this.inputSafeAreaObserver.disconnect();
+                this.inputSafeAreaObserver = null;
+            }
             this.timers.forEach(function(timer) {
                 clearTimeout(timer);
             });

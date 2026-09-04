@@ -71,6 +71,7 @@ div.ai-chatbot-container .ai-chatbot-contact-form p {
     border: 1px solid #e0e0e0;
     border-radius: 12px;
     overflow: hidden;
+    position: relative;
     background: #fff;
 }
 
@@ -330,8 +331,10 @@ div.ai-chatbot-container .ai-chatbot-close-icon svg {
 /* Messages Area */
 .ai-chatbot-messages {
     flex: 1;
+    min-width: 0;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 16px;
+    padding: 16px 16px calc(16px + var(--ai-chatbot-input-safe-area, 65px));
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -343,6 +346,7 @@ div.ai-chatbot-container .ai-chatbot-close-icon svg {
     display: flex;
     gap: 8px;
     max-width: 85%;
+    min-width: 0;
 }
 
 .ai-chatbot-user {
@@ -355,12 +359,17 @@ div.ai-chatbot-container .ai-chatbot-close-icon svg {
 }
 
 div.ai-chatbot-container .ai-chatbot-bubble {
+    flex: 1 1 auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 10px 14px;
     border-radius: 16px;
     font-size: 14px !important;
     font-style: normal !important;
     font-weight: 400 !important;
     line-height: 1.5 !important;
+    word-break: break-word;
     word-wrap: break-word;
 }
 
@@ -414,11 +423,18 @@ div.ai-chatbot-container .ai-chatbot-bot .ai-chatbot-bubble {
 
 /* Input Area */
 .ai-chatbot-input-area {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.82);
+    bottom: 0;
     display: flex;
     gap: 8px;
+    left: 0;
     padding: 12px 16px;
     border-top: 1px solid #e0e0e0;
-    background: #fff;
+    position: absolute;
+    right: 0;
+    z-index: 2;
 }
 
 div.ai-chatbot-container .ai-chatbot-input {
@@ -429,10 +445,12 @@ div.ai-chatbot-container .ai-chatbot-input {
     color: #333 !important;
     font-size: 14px !important;
     line-height: 1.4 !important;
+    max-height: min(120px, 30dvh) !important;
     min-height: 40px !important;
     min-width: 0 !important;
     outline: none !important;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 10px 16px !important;
     resize: none;
     width: 100% !important;
@@ -604,21 +622,27 @@ div.ai-chatbot-container .ai-chatbot-bubble pre {
     border-radius: 8px !important;
     color: #f6f8fa !important;
     max-width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
+    overflow-wrap: anywhere;
     padding: 0.75em !important;
-    white-space: pre;
+    white-space: pre-wrap !important;
+    word-break: break-word;
 }
 
 div.ai-chatbot-container .ai-chatbot-bubble pre code {
     background: transparent !important;
     color: inherit !important;
     font-size: 0.88em !important;
+    overflow-wrap: inherit;
     padding: 0 !important;
+    white-space: inherit !important;
+    word-break: inherit;
 }
 
 div.ai-chatbot-container .ai-chatbot-bubble .ai-chatbot-table-scroll {
     max-width: 100%;
     overflow-x: auto;
+    width: 100%;
 }
 
 div.ai-chatbot-container .ai-chatbot-bubble table {
