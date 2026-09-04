@@ -413,7 +413,7 @@
             bubble.className = 'ai-chatbot-bubble';
 
             if (role === 'bot') {
-                bubble.innerHTML = this.renderMarkdown(content);
+                this.renderMarkdown(bubble, content);
             } else {
                 bubble.textContent = content;
             }
@@ -525,20 +525,129 @@
             return '<i class="' + this.escapeAttr(icon) + '" aria-hidden="true"></i>';
         }
 
-        renderMarkdown(text) {
-            if (typeof text !== 'string') return '';
+        renderMarkdown(target, text) {
+            if (!target) return;
+            if (typeof text !== 'string') text = '';
+
             try {
-                return text
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-                    .replace(/\n/g, '<br>');
+                if (!window.marked || typeof window.marked.parse !== 'function' || !window.DOMPurify) {
+                    throw new Error('Markdown dependencies are unavailable.');
+                }
+
+                var renderer = new window.marked.Renderer();
+                var self = this;
+                renderer.html = function(token) {
+                    var raw_html = token && typeof token.text === 'string' ? token.text : '';
+                    return self.escapeHtml(raw_html);
+                };
+
+                var rendered = window.marked.parse(text, {
+                    async: false,
+                    breaks: true,
+                    gfm: true,
+                    renderer: renderer,
+                });
+                var fragment = window.DOMPurify.sanitize(rendered, {
+                    ALLOWED_TAGS: [
+                        'a', 'blockquote', 'br', 'code', 'del', 'em',
+                        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
+                        'img', 'input', 'li', 'ol', 'p', 'pre', 'strong',
+                        'table', 'tbody', 'td', 'th', 'thead', 'tr', 'ul',
+                    ],
+                    ALLOWED_ATTR: [
+                        'align', 'alt', 'checked', 'class', 'disabled',
+                        'href', 'src', 'start', 'title', 'type',
+                    ],
+                    ALLOW_ARIA_ATTR: false,
+                    ALLOW_DATA_ATTR: false,
+                    RETURN_DOM_FRAGMENT: true,
+                });
+
+                this.normalizeMarkdownElements(fragment);
+                target.textContent = '';
+                target.appendChild(fragment);
             } catch (e) {
                 console.warn('AI Chatbot markdown render error:', e);
-                return this.escapeHtml(text);
+                target.textContent = text;
+            }
+        }
+
+        normalizeMarkdownElements(target) {
+            var links = target.querySelectorAll('a');
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i];
+                var href = link.getAttribute('href') || '';
+                var link_url = this.getSafeUrl(href, ['http:', 'https:', 'mailto:', 'tel:'], true);
+                if (!link_url) {
+                    link.removeAttribute('href');
+                    link.removeAttribute('target');
+                    link.removeAttribute('rel');
+                    continue;
+                }
+
+                link.setAttribute('href', href);
+                if (link_url.protocol === 'http:' || link_url.protocol === 'https:') {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer nofollow');
+                } else {
+                    link.removeAttribute('target');
+                    link.removeAttribute('rel');
+                }
+            }
+
+            var images = target.querySelectorAll('img');
+            for (var j = 0; j < images.length; j++) {
+                var image = images[j];
+                var src = image.getAttribute('src') || '';
+                var image_url = this.getSafeUrl(src, ['http:', 'https:'], false);
+                if (!image_url) {
+                    image.replaceWith(document.createTextNode(image.getAttribute('alt') || ''));
+                    continue;
+                }
+
+                image.setAttribute('loading', 'lazy');
+                image.setAttribute('decoding', 'async');
+                image.setAttribute('referrerpolicy', 'no-referrer');
+            }
+
+            var checkboxes = target.querySelectorAll('input[type="checkbox"]');
+            for (var k = 0; k < checkboxes.length; k++) {
+                checkboxes[k].disabled = true;
+            }
+
+            var code_blocks = target.querySelectorAll('code[class]');
+            for (var m = 0; m < code_blocks.length; m++) {
+                var class_name = code_blocks[m].getAttribute('class') || '';
+                if (!/^language-[a-z0-9_+-]+$/i.test(class_name)) {
+                    code_blocks[m].removeAttribute('class');
+                }
+            }
+
+            var tables = Array.prototype.slice.call(target.querySelectorAll('table'));
+            for (var n = 0; n < tables.length; n++) {
+                var wrapper = document.createElement('div');
+                wrapper.className = 'ai-chatbot-table-scroll';
+                tables[n].parentNode.insertBefore(wrapper, tables[n]);
+                wrapper.appendChild(tables[n]);
+            }
+        }
+
+        getSafeUrl(value, allowed_protocols, allow_fragment) {
+            if (typeof value !== 'string') return null;
+
+            var normalized = value.trim();
+            if (!normalized || /[\u0000-\u001F\u007F]/.test(normalized)) return null;
+            if (allow_fragment && normalized.charAt(0) === '#') {
+                return {protocol: 'fragment:'};
+            }
+
+            try {
+                var url = new URL(normalized, window.location.href);
+                if (allowed_protocols.indexOf(url.protocol) === -1) return null;
+                if ((url.protocol === 'http:' || url.protocol === 'https:') && (url.username || url.password)) return null;
+                return url;
+            } catch (e) {
+                return null;
             }
         }
 

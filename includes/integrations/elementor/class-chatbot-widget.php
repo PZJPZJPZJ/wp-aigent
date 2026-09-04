@@ -18,8 +18,16 @@ class AI_Chatbot_Widget {
 
     public static function register_assets(): void {
         self::register_font_awesome();
+        wp_register_script('wp-aigent-marked', WP_AIGENT_URL . 'assets/modules/chatbots/vendor/marked.umd.js', [], '18.0.11', true);
+        wp_register_script('wp-aigent-dompurify', WP_AIGENT_URL . 'assets/modules/chatbots/vendor/purify.min.js', [], '3.4.14', true);
         wp_register_style('ai-chat-widget', WP_AIGENT_URL . 'assets/modules/chatbots/css/widget.css', [], self::version('assets/modules/chatbots/css/widget.css'));
-        wp_register_script('ai-chat-widget', WP_AIGENT_URL . 'assets/modules/chatbots/js/widget.js', ['wp-aigent-browser-state'], self::version('assets/modules/chatbots/js/widget.js'), true);
+        wp_register_script(
+            'ai-chat-widget',
+            WP_AIGENT_URL . 'assets/modules/chatbots/js/widget.js',
+            ['wp-aigent-browser-state', 'wp-aigent-marked', 'wp-aigent-dompurify'],
+            self::version('assets/modules/chatbots/js/widget.js'),
+            true
+        );
         wp_localize_script('ai-chat-widget', 'AIChatBotGlobals', [
             'rest_url'    => esc_url_raw(rest_url('ai-chat/chat')),
             'history_url' => esc_url_raw(rest_url('ai-chat/history')),

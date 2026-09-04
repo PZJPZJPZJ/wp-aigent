@@ -525,11 +525,140 @@ div.ai-chatbot-container .ai-chat-contact-submit {
     border-radius: 3px;
 }
 
-/* Markdown link styling */
+/* Markdown content */
+div.ai-chatbot-container .ai-chatbot-bot .ai-chatbot-bubble > :first-child {
+    margin-top: 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bot .ai-chatbot-bubble > :last-child {
+    margin-bottom: 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble p,
+div.ai-chatbot-container .ai-chatbot-bubble blockquote,
+div.ai-chatbot-container .ai-chatbot-bubble ul,
+div.ai-chatbot-container .ai-chatbot-bubble ol,
+div.ai-chatbot-container .ai-chatbot-bubble pre,
+div.ai-chatbot-container .ai-chatbot-bubble .ai-chatbot-table-scroll {
+    margin: 0 0 0.75em !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble h1,
+div.ai-chatbot-container .ai-chatbot-bubble h2,
+div.ai-chatbot-container .ai-chatbot-bubble h3,
+div.ai-chatbot-container .ai-chatbot-bubble h4,
+div.ai-chatbot-container .ai-chatbot-bubble h5,
+div.ai-chatbot-container .ai-chatbot-bubble h6 {
+    color: inherit !important;
+    font-family: inherit !important;
+    font-style: normal !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    margin: 1em 0 0.45em !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble h1 { font-size: 1.45em !important; }
+div.ai-chatbot-container .ai-chatbot-bubble h2 { font-size: 1.32em !important; }
+div.ai-chatbot-container .ai-chatbot-bubble h3 { font-size: 1.2em !important; }
+div.ai-chatbot-container .ai-chatbot-bubble h4,
+div.ai-chatbot-container .ai-chatbot-bubble h5,
+div.ai-chatbot-container .ai-chatbot-bubble h6 { font-size: 1.05em !important; }
+
+div.ai-chatbot-container .ai-chatbot-bubble ul,
+div.ai-chatbot-container .ai-chatbot-bubble ol {
+    padding-left: 1.5em !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble li {
+    margin: 0.25em 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble li > ul,
+div.ai-chatbot-container .ai-chatbot-bubble li > ol {
+    margin-bottom: 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble blockquote {
+    border-left: 3px solid #c7cdd3 !important;
+    color: #59636e !important;
+    padding: 0.1em 0 0.1em 0.8em !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble hr {
+    border: 0 !important;
+    border-top: 1px solid #dfe3e7 !important;
+    margin: 0.9em 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble code {
+    background: #f1f3f5 !important;
+    border-radius: 4px !important;
+    color: #24292f !important;
+    font-family: Consolas, Monaco, 'Courier New', monospace !important;
+    font-size: 0.9em !important;
+    padding: 0.12em 0.35em !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble pre {
+    background: #1f2328 !important;
+    border-radius: 8px !important;
+    color: #f6f8fa !important;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.75em !important;
+    white-space: pre;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble pre code {
+    background: transparent !important;
+    color: inherit !important;
+    font-size: 0.88em !important;
+    padding: 0 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble .ai-chatbot-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble table {
+    border-collapse: collapse !important;
+    font-size: 0.92em !important;
+    min-width: max-content;
+    width: 100%;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble th,
+div.ai-chatbot-container .ai-chatbot-bubble td {
+    border: 1px solid #dfe3e7 !important;
+    padding: 0.4em 0.55em !important;
+    text-align: left;
+    vertical-align: top;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble th {
+    background: #f6f8fa !important;
+    font-weight: 600 !important;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble img {
+    border-radius: 6px;
+    display: block;
+    height: auto;
+    margin: 0.5em 0;
+    max-width: 100%;
+}
+
+div.ai-chatbot-container .ai-chatbot-bubble input[type="checkbox"] {
+    margin: 0 0.35em 0 0 !important;
+    pointer-events: none;
+    vertical-align: middle;
+}
+
 .ai-chatbot-bubble a {
     color: #2196F3;
     text-decoration: underline;
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .ai-chatbot-bubble a:hover {
