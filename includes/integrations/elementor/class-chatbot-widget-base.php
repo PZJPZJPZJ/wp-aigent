@@ -188,9 +188,32 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
         ]);
 
         $this->add_live_control('popup_color', [
-            'label'   => __('Popup/Header Color', 'wp-aigent'),
-            'type'    => \Elementor\Controls_Manager::COLOR,
-            'default' => '#25b366',
+            'label'       => __('Header Background Color', 'wp-aigent'),
+            'description' => __('Choose a color with transparency so chat content remains visible behind the header. Default opacity: 90%. A fully opaque color disables the see-through effect.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::COLOR,
+            'alpha'       => true,
+            'default'     => 'rgba(37, 179, 102, 0.90)',
+        ]);
+
+        $this->add_live_control('header_blur', [
+            'label'       => __('Header Background Blur', 'wp-aigent'),
+            'description' => __('Applies Gaussian blur to chat content behind the translucent header. Default: 10px. Set to 0 to disable blur; unsupported browsers keep the selected background color.', 'wp-aigent'),
+            'type'        => \Elementor\Controls_Manager::SLIDER,
+            'size_units'  => ['px'],
+            'range'       => [
+                'px' => [
+                    'min'  => 0,
+                    'max'  => 40,
+                    'step' => 1,
+                ],
+            ],
+            'default'     => [
+                'unit' => 'px',
+                'size' => 10,
+            ],
+            'selectors'   => [
+                '{{WRAPPER}} .ai-chatbot-header' => '-webkit-backdrop-filter: blur({{SIZE}}{{UNIT}}); backdrop-filter: blur({{SIZE}}{{UNIT}});',
+            ],
         ]);
 
         $this->add_live_control('button_color', [
@@ -237,10 +260,10 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
 
         $this->add_live_control('input_bar_color', [
             'label'       => __('Background Color', 'wp-aigent'),
-            'description' => __('Choose a color with transparency to keep messages visible behind the input bar. Recommended opacity: 75–90%. A fully opaque color disables the see-through effect.', 'wp-aigent'),
+            'description' => __('Choose a color with transparency to keep messages visible behind the input bar. Default opacity: 80%. A fully opaque color disables the see-through effect.', 'wp-aigent'),
             'type'        => \Elementor\Controls_Manager::COLOR,
             'alpha'       => true,
-            'default'     => 'rgba(255, 255, 255, 0.82)',
+            'default'     => 'rgba(255, 255, 255, 0.80)',
             'selectors'   => [
                 '{{WRAPPER}} .ai-chatbot-input-area' => 'background-color: {{VALUE}};',
             ],
@@ -248,7 +271,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
 
         $this->add_live_control('input_bar_blur', [
             'label'       => __('Background Blur', 'wp-aigent'),
-            'description' => __('Applies Gaussian blur to chat content behind the translucent input bar. Recommended: 12px. Set to 0 to disable blur; unsupported browsers keep the selected background color.', 'wp-aigent'),
+            'description' => __('Applies Gaussian blur to chat content behind the translucent input bar. Default: 10px. Set to 0 to disable blur; unsupported browsers keep the selected background color.', 'wp-aigent'),
             'type'        => \Elementor\Controls_Manager::SLIDER,
             'size_units'  => ['px'],
             'range'       => [
@@ -260,7 +283,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             ],
             'default'     => [
                 'unit' => 'px',
-                'size' => 12,
+                'size' => 10,
             ],
             'selectors'   => [
                 '{{WRAPPER}} .ai-chatbot-input-area' => '-webkit-backdrop-filter: blur({{SIZE}}{{UNIT}}); backdrop-filter: blur({{SIZE}}{{UNIT}});',
@@ -640,7 +663,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
             '--hint-font-size:' + (settings.hint_font_size || '15') + 'px',
             '--popup-transition-duration:' + config.popup_transition_duration + 'ms',
             '--ai-chatbot-primary:' + (settings.button_color || '#25b366'),
-            '--ai-chatbot-popup:' + (settings.popup_color || '#25b366'),
+            '--ai-chatbot-popup:' + (settings.popup_color || 'rgba(37, 179, 102, 0.90)'),
             '--ai-chatbot-button:' + (settings.button_color || '#25b366'),
             '--ai-chatbot-button-hover:' + (settings.button_color || '#25b366')
         ].join(';') + ';';
@@ -663,7 +686,7 @@ class AI_Chatbot_Widget_Base extends \Elementor\Widget_Base {
 
     private function build_css_vars(array $config): string {
         $settings = $this->get_settings_for_display();
-        $popup_color = $settings['popup_color'] ?: '#25b366';
+        $popup_color = $settings['popup_color'] ?: 'rgba(37, 179, 102, 0.90)';
         $button_color = $settings['button_color'] ?: '#25b366';
         $ripple_color = $settings['ripple_color'] ?: $button_color;
         $hint_bg = $settings['hint_bg'] ?: '#ffffff';
