@@ -542,14 +542,14 @@
 }
 .ai-conv-msg-tokens {
     font-size: 11px;
-    color: #999;
+    color: #72aee6;
     margin-top: 4px;
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: 0.3px;
 }
 .ai-conv-msg-info {
     font-size: 11px;
-    color: #999;
+    color: #72aee6;
     margin-top: 2px;
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: 0.3px;

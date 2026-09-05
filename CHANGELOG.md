@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [2.1.5] - 2026-09-05
+
+### Changed
+
+- Conversation详情Messages中的Token、Model、Effort、Time与Duration统计小字统一使用Knowledge Trace的蓝色，不再交替显示灰色和蓝色元数据行。
+- AI Chatbot容器内所有滚动区域统一使用6px细窄圆角滚动条、透明轨道和悬停加深效果，同时覆盖消息区、多行输入框、Markdown表格及其他内部滚动元素，并通过标准`scrollbar-*`属性兼容Firefox。
+
 ## [2.1.4] - 2026-09-04
 
 ### Added

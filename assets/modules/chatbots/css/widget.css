@@ -540,13 +540,41 @@ div.ai-chatbot-container .ai-chat-contact-submit {
     font-size: 14px;
 }
 
-/* Scrollbar */
-.ai-chatbot-messages::-webkit-scrollbar {
+/* Unified modern scrollbars */
+div.ai-chatbot-container,
+div.ai-chatbot-container * {
+    scrollbar-color: rgba(100, 116, 139, 0.62) transparent;
+    scrollbar-width: thin;
+}
+
+div.ai-chatbot-container::-webkit-scrollbar,
+div.ai-chatbot-container *::-webkit-scrollbar {
+    height: 6px;
     width: 6px;
 }
-.ai-chatbot-messages::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
+
+div.ai-chatbot-container::-webkit-scrollbar-track,
+div.ai-chatbot-container *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+div.ai-chatbot-container::-webkit-scrollbar-thumb,
+div.ai-chatbot-container *::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.62);
+    background-clip: padding-box;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+
+div.ai-chatbot-container::-webkit-scrollbar-thumb:hover,
+div.ai-chatbot-container *::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.82);
+    background-clip: padding-box;
+}
+
+div.ai-chatbot-container::-webkit-scrollbar-corner,
+div.ai-chatbot-container *::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 /* Markdown content */
