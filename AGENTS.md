@@ -18,7 +18,7 @@ WP AIgent 是一个面向 WordPress 的 AI 客情管理插件。当前提供多�
 
 ## 统一目录布局
 
-项目只使用以下最终目录布局。禁止重新创建 `ai-chatbot/`、`ai-form/`、`migrations/` 或其他过渡目录。
+项目只使用以下稳定目录边界。第一层目录必须表达真实的运行职责或所有权；禁止重新创建 `ai-chatbot/`、`ai-form/`、`migrations/`、`assets/modules/`、`templates/modules/` 或其他过渡目录。
 
 ```text
 wp-aigent.php                         # 最小插件入口：常量与生命周期 Hook
@@ -49,25 +49,36 @@ includes/
 │   ├── lifecycle/                   # [未实现] Lead 阶段、负责人、标签和跟进
 │   └── analytics/                   # [未实现] 聚合读模型、漏斗、趋势和 AI 用量统计
 ├── integrations/
-│   ├── elementor/                   # [已实现] Widget和国家区号Forms字段
+│   ├── elementor/                   # [已实现] 按业务接入点继续分为chatbots/与forms/
 │   ├── wordpress/                   # [部分实现] 当前包含 GitHub 更新器
 │   ├── channels/                    # [未实现] Email、WeCom 等独立通知渠道 Adapter
 │   └── marketing/                   # [未实现] Google Ads、Meta、CRM 等 Adapter
 └── admin/
-    ├── chatbots/                    # [已实现] Assets、AJAX 和列表列
-    ├── conversations/               # [已实现] 对话导出
-    ├── menu/                        # [部分实现] 当前拥有Security与Lead Attribution设置页
+    ├── chatbots/                    # [已实现] Chatbot预览AJAX和列表列
+    ├── conversations/               # [已实现] 对话列表列、通知AJAX和导出
+    ├── providers/                   # [已实现] Provider模型目录AJAX
+    ├── settings/                    # [部分实现] Security与Lead Attribution设置页
     ├── rest/                        # [未实现] 统一后台 REST Controller
-    └── shared/                      # [未实现] 后台共用表格、筛选和状态组件
+    └── shared/                      # [部分实现] 跨后台内容页共用的Assets装配
 assets/
-└── modules/<module>/                # 模块独占的原生 CSS / JavaScript
+├── admin/                           # 后台专用CSS / JavaScript，继续按owner或shared分组
+├── core/                            # Core浏览器能力，当前为identity与attribution
+└── integrations/<integration>/      # 外部集成前端资源，继续按业务接入点分组
 templates/
-└── modules/<module>/                # 模块模板和默认配置；不得查询数据库
+├── admin/<module>/                  # 后台PHP模板
+└── notifications/                   # 通知渠道输出模板
 tests/                               # [未实现] unit / integration / contract
 CHANGELOG.md                         # 变更日志、重大决定、兼容与回滚记录
 ```
 
-不存在代码的规划目录不应为了“看起来完整”而提前创建。目录应在出现真实实现时建立，禁止空目录、单纯转发类和无业务价值的层级。
+模块默认Prompt、JSON Schema等非公开运行资源由模块自身持有，例如`includes/modules/chatbots/defaults/`，不得混入展示模板。不存在代码的规划目录不应为了“看起来完整”而提前创建。目录应在出现真实实现时建立，禁止空目录、单纯转发类和无业务价值的层级。
+
+新增文件时按以下顺序确定位置，避免再次进行横向目录重构：
+
+1. 先确定唯一Owner：通用能力进入`core/`，业务能力进入`modules/<module>/`，第三方适配进入`integrations/<integration>/<feature>/`，后台入口进入`admin/<owner>/`。
+2. PHP模板只按使用场景进入`templates/admin/<module>/`或明确的新场景目录；静态资源按实际执行层进入`assets/admin/`、`assets/core/`或`assets/integrations/`，不得为对称而复制PHP目录树。
+3. 小模块保持扁平；只有同一职责出现多个真实文件或边界已经需要隔离时，才在模块内增加`application/`、`domain/`、`infrastructure/`或`presentation/`，禁止预建空分层。
+4. 共享目录只接收至少两个Owner共同使用且无法归属某一模块的实现；业务规则、存储访问和第三方对象不得放入`shared/`。
 
 ## 模块状态与数据所有权
 
@@ -93,7 +104,7 @@ CHANGELOG.md                         # 变更日志、重大决定、兼容与�
 ### Chat 链路（已实现，仍是同步旧链路）
 
 ```text
-assets/modules/chatbots/js/widget.js
+assets/integrations/elementor/chatbots/js/widget.js
   → POST /ai-chat/chat
   → AI_Chatbot_Chat_API::handle_chat()
     → 校验HttpOnly Visitor Cookie；缺失时限流签发新身份；再执行独立IP / Visitor限流

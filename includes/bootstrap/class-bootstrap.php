@@ -46,12 +46,12 @@ class WP_AIGent_Bootstrap {
         require_once $includes . 'modules/chatbots/class-chat-service.php';
         require_once $includes . 'modules/chatbots/class-chat-api.php';
 
-        // Widget (Elementor integration)
-        require_once $includes . 'integrations/elementor/class-chatbot-widget.php';
+        // Elementor integrations
+        require_once $includes . 'integrations/elementor/chatbots/class-chatbot-widget.php';
 
         // Browser attribution and the retained Elementor country-code field.
         require_once $includes . 'modules/forms/class-country-resolver.php';
-        require_once $includes . 'integrations/elementor/class-form-enhancer.php';
+        require_once $includes . 'integrations/elementor/forms/class-form-enhancer.php';
         (new WP_AIGent_Attribution_Module())->init();
         (new WP_AIGent_Elementor_Form_Enhancer())->init();
 
@@ -61,12 +61,16 @@ class WP_AIGent_Bootstrap {
 
         // Admin
         if (is_admin()) {
-            require_once $includes . 'admin/menu/class-settings-page.php';
-            require_once $includes . 'admin/chatbots/class-admin-columns.php';
+            require_once $includes . 'admin/settings/class-settings-page.php';
+            require_once $includes . 'admin/chatbots/class-list-columns.php';
             require_once $includes . 'admin/chatbots/class-admin-ajax.php';
-            require_once $includes . 'admin/chatbots/class-admin-assets.php';
+            require_once $includes . 'admin/providers/class-admin-ajax.php';
+            require_once $includes . 'admin/conversations/class-list-columns.php';
+            require_once $includes . 'admin/conversations/class-notification-ajax.php';
             require_once $includes . 'admin/conversations/class-export.php';
+            require_once $includes . 'admin/shared/class-admin-assets.php';
             new AI_Chatbot_Admin_Columns();
+            new WP_AIGent_Conversation_Admin_Columns();
             new AI_Chatbot_Export();
             (new AI_Chatbot_Admin_Assets())->register();
             (new WP_AIGent_Settings_Page())->register();
@@ -82,9 +86,9 @@ class WP_AIGent_Bootstrap {
 
         // AJAX handlers
         add_action('wp_ajax_ai_chatbot_preview', ['AI_Chatbot_Admin_Ajax', 'preview']);
-        add_action('wp_ajax_ai_chatbot_trigger_notify', ['AI_Chatbot_Admin_Ajax', 'trigger_notify']);
-        add_action('wp_ajax_ai_chatbot_fetch_models', ['AI_Chatbot_Admin_Ajax', 'fetch_models']);
-        add_action('wp_ajax_ai_provider_save_models', ['AI_Chatbot_Admin_Ajax', 'save_provider_models']);
+        add_action('wp_ajax_ai_chatbot_trigger_notify', ['WP_AIGent_Conversation_Notification_Ajax', 'trigger_notify']);
+        add_action('wp_ajax_ai_chatbot_fetch_models', ['WP_AIGent_Provider_Admin_Ajax', 'fetch_models']);
+        add_action('wp_ajax_ai_provider_save_models', ['WP_AIGent_Provider_Admin_Ajax', 'save_provider_models']);
 
         // WP Cron: inactivity notification check
         add_action('ai_chatbot_inactivity_notify', ['AI_Chatbot_Notifier', 'check_inactivity_and_notify']);

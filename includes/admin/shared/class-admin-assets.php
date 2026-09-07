@@ -12,11 +12,11 @@ class AI_Chatbot_Admin_Assets {
         $screen = get_current_screen();
         if (!$screen || !in_array($screen->post_type, ['ai_provider', 'ai_chatbot', 'ai_knowledge', 'ai_conversation'], true)) return;
 
-        wp_enqueue_style('ai-chatbot-admin', WP_AIGENT_URL . 'assets/modules/chatbots/css/admin.css', [], $this->version('assets/modules/chatbots/css/admin.css'));
+        wp_enqueue_style('ai-chatbot-admin', WP_AIGENT_URL . 'assets/admin/shared/css/content.css', [], $this->version('assets/admin/shared/css/content.css'));
         wp_enqueue_style('dashicons');
 
         if (in_array($screen->post_type, ['ai_chatbot', 'ai_knowledge'], true) && $screen->base === 'post') {
-            wp_enqueue_script('ai-chatbot-admin', WP_AIGENT_URL . 'assets/modules/chatbots/js/admin.js', ['jquery'], $this->version('assets/modules/chatbots/js/admin.js'), true);
+            wp_enqueue_script('ai-chatbot-admin', WP_AIGENT_URL . 'assets/admin/shared/js/configuration.js', ['jquery'], $this->version('assets/admin/shared/js/configuration.js'), true);
             wp_localize_script('ai-chatbot-admin', 'aiChatbotAdmin', [
                 'preview_nonce' => wp_create_nonce('ai_chatbot_preview'),
                 'providerModels' => $this->provider_models(),
@@ -24,7 +24,7 @@ class AI_Chatbot_Admin_Assets {
         }
 
         if ($screen->post_type === 'ai_provider' && $screen->base === 'post') {
-            wp_enqueue_script('ai-provider-admin', WP_AIGENT_URL . 'assets/modules/providers/js/admin.js', ['jquery'], $this->version('assets/modules/providers/js/admin.js'), true);
+            wp_enqueue_script('ai-provider-admin', WP_AIGENT_URL . 'assets/admin/providers/js/models.js', ['jquery'], $this->version('assets/admin/providers/js/models.js'), true);
             wp_localize_script('ai-provider-admin', 'aiProviderAdmin', [
                 'providerId' => (int) get_the_ID(),
                 'fetchModelsNonce' => wp_create_nonce('ai_chatbot_fetch_models'),

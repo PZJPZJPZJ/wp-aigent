@@ -383,13 +383,13 @@ class AI_Chatbot_Notifier {
 
     private function format_wecom_markdown(array $data, int $conversation_id = 0): string {
         ob_start();
-        include WP_AIGENT_PATH . 'templates/modules/notifications/wecom-markdown.php';
+        include WP_AIGENT_PATH . 'templates/notifications/wecom-markdown.php';
         return ob_get_clean();
     }
 
     private function format_email_html(array $data, int $conversation_id = 0): string {
         ob_start();
-        include WP_AIGENT_PATH . 'templates/modules/notifications/email-html.php';
+        include WP_AIGENT_PATH . 'templates/notifications/email-html.php';
         return ob_get_clean();
     }
 

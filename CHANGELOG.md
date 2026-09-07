@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-07
+
+### Changed
+
+- 重组项目目录但不改变现有产品行为：后台资源进入`assets/admin/`，Visitor与Attribution浏览器能力进入`assets/core/`，Elementor Chatbot与Forms资源进入`assets/integrations/elementor/`；Elementor PHP接入也按`chatbots/`和`forms/`拆分，后台Settings、Provider、Conversation与共享Assets分别归入明确Owner。
+- 展示文件改按使用场景组织为`templates/admin/<module>/`与`templates/notifications/`，移除只有单一`modules/`子目录的无效层级；Chatbot默认Prompt与JSON配置迁回`includes/modules/chatbots/defaults/`，明确它们属于模块运行资源而不是展示模板。
+- Chatbot后台AJAX只保留预览职责，Provider模型维护与Conversation手动通知分别迁入所属后台Controller；Chatbot与Conversation列表列也拆为独立类，原AJAX action、nonce、Capability、输出与列表内容保持一致。
+- **重大决定：固定“运行职责优先、Owner次之、按需分层”的目录规则。** 背景是此前PHP、静态资源和模板机械复制`modules/`层级，导致单子目录、资源归属失真和跨模块后台类；最终决定保留`includes/core|modules|integrations|admin`的代码边界，Assets只镜像实际执行层，Templates只按使用场景分类，小模块保持扁平且仅在出现真实复杂度时增加内部分层。主要替代方案是继续维持三棵对称模块树，或把全部资源与PHP完全共置；前者保留无效层级，后者会混合Web可访问资源、内部默认配置和执行代码，因此均未采用。本次不迁移数据库、option或postmeta，不修改REST URL、公开Hook、CPT、Script Handle和用户配置；部署必须以完整插件包原子替换，避免新旧文件混装。回滚时完整恢复`2.1.5`插件文件即可，无需回滚数据。
+
 ## [2.1.5] - 2026-09-05
 
 ### Changed

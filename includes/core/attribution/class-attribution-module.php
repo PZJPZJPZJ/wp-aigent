@@ -9,7 +9,7 @@ class WP_AIGent_Attribution_Module {
     }
 
     public function register_assets(): void {
-        $browser_state_path = 'assets/modules/identity/js/browser-state.js';
+        $browser_state_path = 'assets/core/identity/js/browser-state.js';
         if (!wp_script_is('wp-aigent-browser-state', 'registered')) {
             wp_register_script(
                 'wp-aigent-browser-state',
@@ -26,7 +26,7 @@ class WP_AIGent_Attribution_Module {
             return;
         }
 
-        $attribution_path = 'assets/modules/attribution/js/tracker.js';
+        $attribution_path = 'assets/core/attribution/js/tracker.js';
         wp_enqueue_script(
             'wp-aigent-attribution',
             WP_AIGENT_URL . $attribution_path,

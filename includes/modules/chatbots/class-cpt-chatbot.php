@@ -3,7 +3,7 @@ defined('ABSPATH') || exit;
 
 class AI_Chatbot_CPT_Chatbot {
 
-    private const DEFAULTS_DIR = WP_AIGENT_PATH . 'templates/modules/chatbots/defaults';
+    private const DEFAULTS_DIR = WP_AIGENT_PATH . 'includes/modules/chatbots/defaults';
 
     public static function register(): void {
         register_post_type('ai_chatbot', [
@@ -50,7 +50,7 @@ class AI_Chatbot_CPT_Chatbot {
 
     public static function render_meta_box($post): void {
         wp_nonce_field('ai_chatbot_meta', 'ai_chatbot_meta_nonce');
-        include WP_AIGENT_PATH . 'templates/modules/chatbots/admin-meta-box.php';
+        include WP_AIGENT_PATH . 'templates/admin/chatbots/configuration.php';
     }
 
     public static function save_meta(int $post_id, $post): void {

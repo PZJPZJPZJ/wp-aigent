@@ -41,11 +41,11 @@ class AI_Chatbot_CPT_Knowledge {
 
     public static function render_meta_box($post): void {
         wp_nonce_field('ai_knowledge_meta', 'ai_knowledge_meta_nonce');
-        include WP_AIGENT_PATH . 'templates/modules/knowledge/admin-meta-box.php';
+        include WP_AIGENT_PATH . 'templates/admin/knowledge/content.php';
     }
 
     public static function render_card_meta_box($post): void {
-        include WP_AIGENT_PATH . 'templates/modules/knowledge/admin-card-meta-box.php';
+        include WP_AIGENT_PATH . 'templates/admin/knowledge/card.php';
     }
 
     public static function save_meta(int $post_id, $post): void {

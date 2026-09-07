@@ -69,7 +69,7 @@ class AI_Chatbot_CPT_Provider {
 
     public static function render_meta_box($post): void {
         wp_nonce_field('ai_provider_meta', 'ai_provider_meta_nonce');
-        include WP_AIGENT_PATH . 'templates/modules/providers/admin-meta-box.php';
+        include WP_AIGENT_PATH . 'templates/admin/providers/connection.php';
     }
 
     public static function save_meta(int $post_id, $post): void {

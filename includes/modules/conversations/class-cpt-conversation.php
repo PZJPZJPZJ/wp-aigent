@@ -129,7 +129,7 @@ class AI_Chatbot_CPT_Conversation {
             }
         }
 
-        include WP_AIGENT_PATH . 'templates/modules/conversations/admin-meta-box.php';
+        include WP_AIGENT_PATH . 'templates/admin/conversations/details.php';
     }
 
     private static function attribution_view(array $attribution): array {

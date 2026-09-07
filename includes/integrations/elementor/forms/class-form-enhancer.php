@@ -12,7 +12,7 @@ class WP_AIGent_Elementor_Form_Enhancer {
 
     public function enqueue_country_code_script(): void {
         if ((string) WP_AIGent_Attribution_Settings::get('country_code_enabled') !== '1') return;
-        $path = 'assets/modules/forms/js/country-code.js';
+        $path = 'assets/integrations/elementor/forms/js/country-code.js';
         $mtime = is_readable(WP_AIGENT_PATH . $path) ? filemtime(WP_AIGENT_PATH . $path) : false;
         wp_enqueue_script('wp-aigent-country-code', WP_AIGENT_URL . $path, [], $mtime ? (string) $mtime : WP_AIGENT_VERSION, ['strategy' => 'defer', 'in_footer' => true]);
     }
@@ -26,7 +26,7 @@ class WP_AIGent_Elementor_Form_Enhancer {
             return;
         }
 
-        require_once WP_AIGENT_PATH . 'includes/integrations/elementor/class-country-code-field.php';
+        require_once WP_AIGENT_PATH . 'includes/integrations/elementor/forms/class-country-code-field.php';
 
         if (method_exists($fields_manager, 'register')) {
             $fields_manager->register(new WP_AIGent_Elementor_Country_Code_Field());
